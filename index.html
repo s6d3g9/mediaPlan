@@ -1521,7 +1521,7 @@ function saveState(){
       chk:document.getElementById('chk').value,
       l2s:document.getElementById('l2s').value,
       mg:document.getElementById('mg').value,
-      ltv:document.getElementById('ltv-repeat').value,
+      ltv:document.getElementById('ltv').value,
     };
     localStorage.setItem(STATE_KEY,JSON.stringify(state));
   }catch(e){}
@@ -1539,7 +1539,7 @@ function loadState(){
     if(s.chk)document.getElementById('chk').value=s.chk;
     if(s.l2s)document.getElementById('l2s').value=s.l2s;
     if(s.mg)document.getElementById('mg').value=s.mg;
-    if(s.ltv)document.getElementById('ltv-repeat').value=s.ltv;
+    if(s.ltv)document.getElementById('ltv').value=s.ltv;
   }catch(e){}
 }
 loadState();
@@ -1616,7 +1616,7 @@ function calc(){
   const chk=+document.getElementById('chk').value||0;
   const l2s=(+document.getElementById('l2s').value||20)/100;
   const mp=(+document.getElementById('mg').value||40)/100;
-  const ltvRepeat=Math.max(1,+document.getElementById('ltv-repeat').value||1);
+  const ltvRepeat=Math.max(1,+document.getElementById('ltv').value||1);
 
   saveState();
 
