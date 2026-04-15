@@ -315,6 +315,11 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
     <div class="ct"><div class="ci">🎯</div>Параметры кампании</div>
 
     <div class="fg">
+      <label class="fl">🔍 Поиск по всем нишам</label>
+      <input id="sub-search" type="text" placeholder="Введите название ниши, услуги или ключевое слово..." oninput="filterSubs()" style="width:100%;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.15);border-radius:8px;padding:.55rem .8rem;font-size:.82rem;color:var(--text);font-family:inherit;box-sizing:border-box" aria-label="Поиск подниши">
+    </div>
+
+    <div class="fg">
       <label class="fl">Категория ниши</label>
       <select id="cat" onchange="onCat()" aria-label="Категория ниши">
         <option value="">— Выберите категорию —</option>
@@ -378,9 +383,8 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 
     <div class="fg">
       <label class="fl">Подниша</label>
-      <input id="sub-search" type="text" placeholder="🔍 Поиск по всем нишам..." oninput="filterSubs()" style="width:100%;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.15);border-radius:8px;padding:.45rem .7rem;font-size:.78rem;color:var(--text);font-family:inherit;margin-bottom:.35rem;box-sizing:border-box" aria-label="Поиск подниши">
       <select id="subniche" onchange="onSubniche()" disabled aria-label="Подниша">
-        <option value="">— Сначала выберите категорию —</option>
+        <option value="">— Выберите категорию или найдите через поиск —</option>
       </select>
       <div id="chips" class="chips" style="display:none"></div>
     </div>
@@ -1094,7 +1098,6 @@ const NICHE_TIPS={
     {i:'🚫',t:'Перед запуском проверьте <strong>минус-слова</strong> в Вордстат — без них до 40% бюджета уходит в мусор.'},
     {i:'⏰',t:'Первые 2 недели — <strong>не меняйте ставки резко</strong>. Дайте алгоритму Директа собрать статистику.'},
   ],
-};
   pets:[
     {i:'🐾',t:'Разделяйте <strong>по виду животного</strong> (собаки/кошки/грызуны) — разная аудитория, разные запросы.'},
     {i:'📍',t:'Геотаргетинг <strong>до 5 км</strong> — хозяева выбирают ближайшую клинику/магазин.'},
@@ -1172,6 +1175,7 @@ const NICHE_TIPS={
     {i:'📞',t:'<strong>Колл-трекинг обязателен</strong> — 70% B2B лидов через телефон.'},
     {i:'📊',t:'<strong>Медийная реклама</strong> в РСЯ на отраслевых сайтах формирует знание о бренде.'},
   ],
+};
 // Алиасы для остальных категорий
 ['garden','handyman'].forEach(k=>NICHE_TIPS[k]=NICHE_TIPS[k]||NICHE_TIPS._default);
 ['wellness'].forEach(k=>NICHE_TIPS[k]=NICHE_TIPS[k]||NICHE_TIPS._default);
@@ -1798,6 +1802,9 @@ function filterSubs(){
         const o=document.createElement('option');o.value=k+'|'+cat;o.textContent=v.name;sub.appendChild(o);
       });
       sub.disabled=false;
+    } else {
+      sub.innerHTML='<option value="">— Выберите категорию или найдите через поиск —</option>';
+      sub.disabled=true;
     }
     return;
   }
