@@ -1980,12 +1980,15 @@ function calc(){
   let rD=null;
   if(chk>0&&ldAvg>0){
     const s=Math.round(ldAvg*l2s);
-    const rev=s*chk, profit=rev*mp;
-    const romi=((rev-budget)/budget)*100;
-    const roi=((profit-budget)/budget)*100;
-    const ltvRev=rev*ltvRepeat, ltvProfit=ltvRev*mp;
-    const ltvRomi=((ltvRev-budget)/budget)*100;
-    rD={s,rev,profit,romi,roi,ltvRepeat,ltvRev,ltvProfit,ltvRomi};
+    const rev=s*chk;
+    const margin=rev*mp;
+    const profit=margin-budget;
+    const romi=budget>0?(margin-budget)/budget*100:0;
+    const ltvRev=rev*ltvRepeat;
+    const ltvMargin=ltvRev*mp;
+    const ltvProfit=ltvMargin-budget;
+    const ltvRomi=budget>0?(ltvMargin-budget)/budget*100:0;
+    rD={s,rev,margin,profit,romi,ltvRepeat,ltvRev,ltvProfit,ltvRomi};
   }
 
   const bArr=[15000,30000,50000,100000,200000];
@@ -1995,7 +1998,7 @@ function calc(){
     const ld=Math.floor(cl*siteCR);
     const cpl=ld>0?b/ld:0;
     let romi=null;
-    if(chk>0&&ld>0){const s2=Math.round(ld*l2s);romi=((s2*chk*ltvRepeat-b)/b)*100;}
+    if(chk>0&&ld>0){const s2=Math.round(ld*l2s);romi=(s2*chk*mp-b)/b*100;}
     return{budget:b,clicks:cl,leads:ld,cpl,romi};
   });
 
@@ -2008,6 +2011,7 @@ function calc(){
 }
 
 function fmt(n){
+  if(n<0)return'−'+fmt(-n);
   if(n>=1e6)return(n/1e6).toFixed(1).replace('.',',')+' млн';
   if(n>=1e4)return Math.round(n/1e3)+' тыс.';
   if(n>=1e3)return(n/1e3).toFixed(1).replace('.',',')+' тыс.';
@@ -2063,6 +2067,31 @@ function copyStructure(){
     g.keys.forEach(k=>{txt+='  ['+k.match+'] '+k.kw+' — ~'+k.vol.toLocaleString('ru')+'/мес\n';});
     txt+='\n';
   });
+  copyText(txt);
+}
+
+function copyReport(){
+  if(!window._lastCamp)return;
+  const c=window._lastCamp;
+  const region=document.getElementById('region');
+  const regText=region.options[region.selectedIndex].text;
+  let txt='МЕДИАПЛАН: '+c.nicheName+'\n';
+  txt+=c.catName+' · '+new Date().toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'})+'\n';
+  txt+='Бюджет: '+c.budget.toLocaleString('ru')+' ₽/мес\n\n';
+  txt+='Регион: '+regText+'\n';
+  txt+='Прогноз показов/мес: '+fmt(Math.round(c.clAvg/c.n.ctr))+'\n';
+  txt+='Прогноз кликов/мес: ~'+c.clAvg.toLocaleString('ru')+'\n';
+  txt+='Средний CPC: ~'+Math.round(c.cAvg)+' ₽\n';
+  txt+='Ожидаемых лидов/мес: ~'+c.ldAvg+'\n';
+  txt+='CPL: ~'+Math.round(c.cplAvg)+' ₽\n';
+  txt+='Поиск / РСЯ: '+c.sB.toLocaleString('ru')+' ₽ / '+c.rB.toLocaleString('ru')+' ₽\n';
+  if(c.rD){
+    txt+='Продаж/мес: '+c.rD.s+'\n';
+    txt+='Выручка: '+c.rD.rev.toLocaleString('ru')+' ₽\n';
+    txt+='Маржа: '+c.rD.margin.toLocaleString('ru')+' ₽\n';
+    txt+='Прибыль: '+c.rD.profit.toLocaleString('ru')+' ₽\n';
+    txt+='ROMI: '+Math.round(c.rD.romi)+'%\n';
+  }
   copyText(txt);
 }
 
@@ -2160,7 +2189,7 @@ function exportXLSX(){
     ['Бюджет РСЯ',c.rB],
   ];
   if(c.rD){
-    overview.push([''],['Продаж/мес',c.rD.s],['Выручка',c.rD.rev],['ROMI',Math.round(c.rD.romi)+'%']);
+    overview.push([''],['Продаж/мес',c.rD.s],['Выручка',c.rD.rev],['Маржа',c.rD.margin],['Прибыль',c.rD.profit],['ROMI',Math.round(c.rD.romi)+'%']);
   }
   const ws1=XLSX.utils.aoa_to_sheet(overview);
   ws1['!cols']=[{wch:25},{wch:30}];
@@ -2234,10 +2263,13 @@ function whatIf(){
   const clicks=Math.floor(bdg/cpc);
   const leads=Math.max(0,Math.floor(clicks*cr));
   const cpl=leads>0?Math.round(bdg/leads):0;
-  const daily=Math.round(bdg/30);
-  const revenue=leads*avgCheck;
-  const profit=revenue-bdg;
-  const romi=bdg>0?Math.round((revenue-bdg)/bdg*100):0;
+  const l2sVal=(+document.getElementById('l2s').value||20)/100;
+  const mpVal=(+document.getElementById('mg').value||40)/100;
+  const sales=Math.round(leads*l2sVal);
+  const revenue=sales*avgCheck;
+  const grossMargin=revenue*mpVal;
+  const profit=grossMargin-bdg;
+  const romi=bdg>0?Math.round((grossMargin-bdg)/bdg*100):0;
   document.getElementById('wi-clicks').textContent=clicks.toLocaleString('ru');
   document.getElementById('wi-leads').textContent=leads.toLocaleString('ru');
   document.getElementById('wi-cpl').textContent=cpl>0?cpl.toLocaleString('ru')+' ₽':'—';
@@ -2249,10 +2281,10 @@ function whatIf(){
   // Visual bar
   const bar=document.getElementById('wi-bar');
   if(bar){
-    const maxV=Math.max(bdg,revenue,1);
+    const maxV=Math.max(bdg,grossMargin,1);
     bar.innerHTML=`<div style="display:flex;gap:.3rem;align-items:end;height:60px">
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.15rem"><div style="background:#818cf8;border-radius:4px 4px 0 0;width:100%;height:${Math.round(bdg/maxV*50)}px;min-height:4px"></div><div style="font-size:.58rem;color:var(--muted)">Расход</div><div style="font-size:.65rem;font-weight:700">${(bdg/1000).toFixed(0)}К</div></div>
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.15rem"><div style="background:${revenue>=bdg?'#34d399':'#f87171'};border-radius:4px 4px 0 0;width:100%;height:${Math.round(revenue/maxV*50)}px;min-height:4px"></div><div style="font-size:.58rem;color:var(--muted)">Доход</div><div style="font-size:.65rem;font-weight:700">${(revenue/1000).toFixed(0)}К</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.15rem"><div style="background:${grossMargin>=bdg?'#34d399':'#f87171'};border-radius:4px 4px 0 0;width:100%;height:${Math.round(grossMargin/maxV*50)}px;min-height:4px"></div><div style="font-size:.58rem;color:var(--muted)">Маржа</div><div style="font-size:.65rem;font-weight:700">${(grossMargin/1000).toFixed(0)}К</div></div>
     </div>`;
   }
   // Smart tips
@@ -2283,7 +2315,7 @@ function render(d){
   const rExt=d.rD?`
     <div class="m gn"><span class="mi">📈</span><div class="mv">${Math.round(d.rD.romi)}%</div><div class="ml">ROMI</div><div class="rb"><div class="rf" id="romi-fill" style="width:0%;background:${d.rD.romi>=100?'#34d399':d.rD.romi>=0?'#fbbf24':'#f87171'}"></div></div></div>
     <div class="m"><span class="mi">🛒</span><div class="mv">${d.rD.s}</div><div class="ml">Продаж/мес</div></div>
-    <div class="m gn"><span class="mi">💵</span><div class="mv">${fmt(d.rD.rev)}</div><div class="ml">Выручка ₽</div><div class="ms">прибыль ~${fmt(d.rD.profit)} ₽</div></div>`
+    <div class="m${d.rD.profit>=0?' gn':''}"><span class="mi">💵</span><div class="mv">${fmt(d.rD.rev)}</div><div class="ml">Выручка ₽</div><div class="ms"${d.rD.profit<0?' style="color:#f87171"':''}>${d.rD.profit>=0?'прибыль':'убыток'} ~${fmt(Math.abs(d.rD.profit))} ₽</div></div>`
   :`<div class="m"><span class="mi">📅</span><div class="mv">${fmtM(Math.round(d.budget/30))}</div><div class="ml">Бюджет в день</div></div>`;
 
   const c1=mk('card fu');
@@ -2449,9 +2481,10 @@ function render(d){
       <div class="rrow"><span class="rk">Ожидаемых лидов/мес</span><span class="rv">${d.ldMin} – ${d.ldMax}</span></div>
       <div class="rrow"><span class="rk">Стоимость лида (CPL)</span><span class="rv">~${Math.round(d.cplAvg)} ₽</span></div>
       <div class="rrow"><span class="rk">Поиск / РСЯ</span><span class="rv">${d.sB.toLocaleString('ru')} ₽ / ${d.rB.toLocaleString('ru')} ₽</span></div>
-      ${d.rD?`<div class="rrow"><span class="rk">Прогноз продаж/мес</span><span class="rv">${d.rD.s}</span></div><div class="rrow"><span class="rk">Прогноз выручки</span><span class="rv">${fmtM(d.rD.rev)}</span></div><div class="rrow"><span class="rk">ROMI</span><span class="rv">${Math.round(d.rD.romi)}%</span></div>${d.rD.ltvRepeat>1?`<div class="rrow"><span class="rk">LTV-выручка (×${d.rD.ltvRepeat})</span><span class="rv" style="color:var(--green)">${fmtM(d.rD.ltvRev)}</span></div><div class="rrow"><span class="rk">LTV ROMI</span><span class="rv" style="color:var(--green)">${Math.round(d.rD.ltvRomi)}%</span></div>`:''}`:''}
+      ${d.rD?`<div class="rrow"><span class="rk">Прогноз продаж/мес</span><span class="rv">${d.rD.s}</span></div><div class="rrow"><span class="rk">Прогноз выручки</span><span class="rv">${fmtM(d.rD.rev)}</span></div><div class="rrow"><span class="rk">Маржа (${Math.round(mp*100)}%)</span><span class="rv">${fmtM(d.rD.margin)}</span></div><div class="rrow"><span class="rk">Прибыль (за вычетом рекламы)</span><span class="rv" style="color:${d.rD.profit>=0?'var(--green)':'#f87171'}">${fmtM(d.rD.profit)}</span></div><div class="rrow"><span class="rk">ROMI</span><span class="rv" style="color:${d.rD.romi>=0?'var(--green)':'#f87171'}">${Math.round(d.rD.romi)}%</span></div>${d.rD.ltvRepeat>1?`<div class="rrow"><span class="rk">LTV-выручка (×${d.rD.ltvRepeat})</span><span class="rv" style="color:var(--green)">${fmtM(d.rD.ltvRev)}</span></div><div class="rrow"><span class="rk">LTV ROMI</span><span class="rv" style="color:${d.rD.ltvRomi>=0?'var(--green)':'#f87171'}">${Math.round(d.rD.ltvRomi)}%</span></div>`:''}`:''}
     </div>
-    <div style="margin-top:.65rem;font-size:.68rem;color:var(--dim);line-height:1.6">* Данные прогнозные, основаны на средних бенчмарках рынка РФ. Фактические результаты зависят от сайта, объявлений и конкуренции.</div>`;
+    <div style="margin-top:.65rem;font-size:.68rem;color:var(--dim);line-height:1.6">* Данные прогнозные, основаны на средних бенчмарках рынка РФ. Фактические результаты зависят от сайта, объявлений и конкуренции.</div>
+    <div class="export-btns"><button class="ebtn" onclick="copyReport()">📋 Копировать отчёт</button><button class="pbtn" onclick="doPrint()">🖨️ Выгрузить PDF</button></div>`;
   area.appendChild(c7);
 
   const camp=generateCampaign(d.n,d.catKey,d.budget,d.cAvg,d.rm);
@@ -2461,12 +2494,12 @@ function render(d){
   let campHTML=`<div class="ct"><div class="ci">🚀</div>Генератор структуры кампании</div><div class="tab-btns"><button class="tab-btn active" onclick="switchTab(this,'tab-struct')">📋 Структура</button><button class="tab-btn" onclick="switchTab(this,'tab-ads')">📝 Объявления</button><button class="tab-btn" onclick="switchTab(this,'tab-neg')">🚫 Минус-слова</button><button class="tab-btn" onclick="switchTab(this,'tab-utm')">🔗 UTM</button></div>`;
   campHTML+=`<div class="tab-content active" id="tab-struct">`;
   camp.groups.forEach(g=>{campHTML+=`<div class="camp-group"><div class="camp-title">${g.name} <span style="font-size:.64rem;color:var(--dim);font-weight:400">(${g.type==='rsy'?'РСЯ':'Поиск'})</span></div>${g.desc?`<div style="font-size:.72rem;color:var(--muted);margin:-0.3rem 0 .5rem;padding:0 .2rem;line-height:1.5">${g.desc}</div>`:''}${g.keys.map(k=>`<div class="camp-kw"><span><span class="match">[${k.match}]</span> <a href="https://wordstat.yandex.ru/?words=${encodeURIComponent(k.kw)}" target="_blank" class="ws-link" title="Проверить в Wordstat">${k.kw}</a></span><span class="vol">~${k.vol.toLocaleString('ru')}/мес</span></div>`).join('')}</div>`;});
-  campHTML+=`<div class="export-btns"><button class="ebtn green" onclick="exportXLSX()">📊 Скачать XLSX для Директ</button><button class="ebtn" onclick="copyStructure()">📋 Копировать структуру</button></div></div>`;
+  campHTML+=`<div class="export-btns"><button class="ebtn" onclick="copyStructure()">📋 Копировать структуру</button></div></div>`;
   const _adVN=['Цена + оффер','Рейтинг + доверие','CTA + действие','Скидка + дефицит','Гео + удобство','Сравнение + консультация'];
   const _adWY=['Цена в заголовке снижает «инфошум» — покупатели сравнивают цены и охотнее кликают на конкретную сумму.','Рейтинг и отзывы снимают главный страх — «а вдруг подведут?». Работает на осторожных покупателей.','Прямой призыв с конкретной выгодой убеждает колеблющихся сделать первый шаг прямо сейчас.','Скидка + ограниченность мест создают срочность. FOMO (страх упустить) повышает CTR на 15-25%.','Гео-привязка «в [городе]» + «рядом» привлекает локальных клиентов. Конверсия выше на 30% vs. обычных.','Сравнение + бесплатная консультация снижают барьер входа — клиент чувствует что ничем не рискует.'];
   campHTML+=`<div class="tab-content" id="tab-ads"><div style="background:rgba(99,102,241,.07);border:1px solid rgba(129,140,248,.2);border-radius:11px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.78rem;line-height:1.7;color:var(--muted)"><div style="font-size:.8rem;font-weight:700;color:var(--primary);margin-bottom:.4rem">💡 Как работают объявления в Яндекс.Директ</div><div>Директ автоматически тестирует варианты и показывает тот, у которого выше CTR. Поэтому <strong style="color:var(--text)">нужно минимум 3 варианта</strong> — система сама выберет лучший за 1–2 недели.</div><div style="margin-top:.4rem">Объявления сгенерированы <strong style="color:var(--text)">специально под нишу «${d.n.name}»</strong> с учётом особенностей аудитории и конкурентных офферов в этой категории.</div></div>${generateAds(d.n,d.catKey).search.map((a,i)=>`<div style="margin-bottom:.85rem"><div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.3rem;flex-wrap:wrap"><span style="background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);border-radius:5px;padding:.1rem .5rem;font-size:.63rem;font-weight:700;color:var(--primary)">Вариант ${i+1} — ${_adVN[i]||'Вариант '+(i+1)}</span></div><div class="ad-preview"><div style="font-size:.6rem;color:var(--dim);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em">Заголовок 1:</div><div class="ad-t1">${a.t1}</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .1rem;text-transform:uppercase;letter-spacing:.04em">Заголовок 2:</div><div class="ad-t2">${a.t2}</div><div class="ad-url">your-site.ru/${d.catKey}/</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .1rem;text-transform:uppercase;letter-spacing:.04em">Текст объявления:</div><div class="ad-desc">${a.desc}</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .2rem;text-transform:uppercase;letter-spacing:.04em">Быстрые ссылки:</div><div class="ad-sl">${a.sl.map(s=>'<a>'+s+'</a>').join('')}</div></div></div><div style="margin-top:.45rem;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.23);border-radius:8px;padding:.45rem .7rem;font-size:.68rem;color:rgba(251,191,36,.9);line-height:1.5"><strong>💡 Почему такой заголовок:</strong> ${_adWY[i]||''}</div>`).join('')}<div style="margin-top:1rem;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:.75rem .95rem;font-size:.74rem;line-height:1.75;color:var(--muted)"><div style="font-weight:700;color:#34d399;margin-bottom:.45rem">✅ Что обязательно адаптировать перед запуском:</div><div style="display:flex;flex-direction:column;gap:.25rem"><span>🔗 <strong style="color:var(--text)">Быстрые ссылки</strong> — замените на реальные страницы вашего сайта</span><span>💰 <strong style="color:var(--text)">Цена в Варианте 1</strong> — укажите реальную цену или диапазон вашего предложения</span><span>⭐ <strong style="color:var(--text)">Рейтинг и кол-во отзывов</strong> — обновите актуальные данные из Яндекс.Карт</span><span>🌐 <strong style="color:var(--text)">URL (your-site.ru)</strong> — замените на ваш реальный домен во всех объявлениях</span><span>📞 <strong style="color:var(--text)">Расширения Директ</strong> — добавьте телефон, адрес, уточнения в настройках кампании</span></div></div></div>`;
   campHTML+=`<div class="tab-content" id="tab-neg"><div style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:.6rem">Минус-слова подобраны под нишу и уже расширены до большого списка.</div><div class="neg-list">${camp.negatives.map(n=>`<span class="neg-chip">${n}</span>`).join('')}</div><div class="export-btns"><button class="ebtn" onclick="copyNegatives()">📋 Копировать минус-слова</button></div></div>`;
-  campHTML+=`<div class="tab-content" id="tab-utm"><div class="utm-box"><div class="utm-row"><label>URL</label><input id="utm-url" type="text" placeholder="https://example.ru"></div><div class="utm-row"><label>Источник (source)</label><input id="utm-source" type="text" value="yandex" oninput="buildUTM()"></div><div class="utm-row"><label>Канал (medium)</label><input id="utm-medium" type="text" value="cpc" oninput="buildUTM()"></div><div class="utm-row"><label>Кампания (campaign)</label><input id="utm-campaign" type="text" value="${d.catKey}_${d.n.name.replace(/[а-яёА-ЯЁ]/g,c=>{const t={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};return t[c.toLowerCase()]||c}).replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}" oninput="buildUTM()"></div><div class="utm-row"><label>Контент (content)</label><input id="utm-content" type="text" value="ad1" oninput="buildUTM()"></div><div class="utm-row"><label>Ключевое слово (term)</label><input id="utm-term" type="text" value="${d.n.keys[0]||''}" oninput="buildUTM()"></div><div id="utm-output" class="utm-result" style="display:none" onclick="copyUTM()"></div></div></div>`;
+  campHTML+=`<div class="tab-content" id="tab-utm"><div class="utm-box"><div class="utm-row"><label>URL</label><input id="utm-url" type="text" placeholder="https://example.ru"></div><div class="utm-row"><label>Источник (source)</label><input id="utm-source" type="text" value="yandex" oninput="buildUTM()"></div><div class="utm-row"><label>Канал (medium)</label><input id="utm-medium" type="text" value="cpc" oninput="buildUTM()"></div><div class="utm-row"><label>Кампания (campaign)</label><input id="utm-campaign" type="text" value="${d.catKey}_${d.n.name.replace(/[а-яёА-ЯЁ]/g,c=>{const t={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};return t[c.toLowerCase()]||c}).replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}" oninput="buildUTM()"></div><div class="utm-row"><label>Контент (content)</label><input id="utm-content" type="text" value="ad1" oninput="buildUTM()"></div><div class="utm-row"><label>Ключевое слово (term)</label><input id="utm-term" type="text" value="${(d.n.keys[0]||'').replace(/[а-яёА-ЯЁ]/g,c=>{const t={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};return t[c.toLowerCase()]||c}).replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}" oninput="buildUTM()"></div><div id="utm-output" class="utm-result" style="display:none" onclick="copyUTM()"></div></div></div>`;
   campHTML+=`</div>`;
   c8.innerHTML=campHTML;
   area.appendChild(c8);
