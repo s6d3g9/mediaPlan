@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>МедиаПлан Pro — Калькулятор Яндекс.Директ</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -13,7 +15,29 @@
   --accent:#22d3ee;--green:#34d399;--yellow:#fbbf24;--red:#f87171;
   --bg:#0b0f1c;--glass:rgba(255,255,255,0.04);--glass-b:rgba(255,255,255,0.09);
   --text:#f1f5f9;--muted:#94a3b8;--dim:#4b5563;--shadow:0 4px 32px rgba(0,0,0,.45);
+  --card-bg:rgba(255,255,255,0.04);--card-border:rgba(255,255,255,0.09);
+  --inp-bg:rgba(255,255,255,.05);--inp-border:rgba(255,255,255,.1);
+  --opt-bg:#1a2235;
 }
+/* СВЕТЛАЯ ТЕМА */
+[data-theme="light"]{
+  --primary:#6366f1;--primary-dark:#4f46e5;--secondary:#9333ea;
+  --accent:#0891b2;--green:#059669;--yellow:#d97706;--red:#dc2626;
+  --bg:#f1f5f9;--glass:rgba(255,255,255,0.85);--glass-b:rgba(0,0,0,0.08);
+  --text:#1e293b;--muted:#64748b;--dim:#94a3b8;--shadow:0 4px 32px rgba(0,0,0,.08);
+  --card-bg:rgba(255,255,255,.85);--card-border:rgba(0,0,0,.08);
+  --inp-bg:rgba(0,0,0,.03);--inp-border:rgba(0,0,0,.12);
+  --opt-bg:#fff;
+}
+[data-theme="light"] body::before{background:
+  radial-gradient(ellipse 60% 55% at 15% 10%,rgba(99,102,241,.08) 0%,transparent 70%),
+  radial-gradient(ellipse 50% 45% at 85% 80%,rgba(192,132,252,.06) 0%,transparent 70%),
+  radial-gradient(ellipse 40% 35% at 50% 50%,rgba(34,211,238,.04) 0%,transparent 70%)}
+[data-theme="light"] header::before{background:linear-gradient(180deg,rgba(99,102,241,.06) 0%,transparent 100%)}
+[data-theme="light"] .m:hover{border-color:rgba(99,102,241,.2)}
+[data-theme="light"] .btn{box-shadow:0 4px 24px rgba(99,102,241,.25)}
+[data-theme="light"] .neg-chip{background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.15);color:#dc2626}
+[data-theme="light"] select option{background:#fff;color:#1e293b}
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;position:relative}
 body::before{content:'';position:fixed;inset:0;background:
   radial-gradient(ellipse 60% 55% at 15% 10%,rgba(99,102,241,.22) 0%,transparent 70%),
@@ -21,6 +45,9 @@ body::before{content:'';position:fixed;inset:0;background:
   radial-gradient(ellipse 40% 35% at 50% 50%,rgba(34,211,238,.08) 0%,transparent 70%);
   pointer-events:none;z-index:0}
 body>*{position:relative;z-index:1}
+/* Переключатель темы */
+.theme-toggle{position:fixed;top:1rem;right:1rem;z-index:100;width:42px;height:42px;border-radius:12px;border:1.5px solid var(--glass-b);background:var(--glass);backdrop-filter:blur(12px);cursor:pointer;display:grid;place-items:center;font-size:1.1rem;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.theme-toggle:hover{border-color:var(--primary);transform:scale(1.08)}
 
 /* ШАПКА */
 header{padding:3rem 1.5rem 2.5rem;text-align:center;position:relative;overflow:hidden}
@@ -47,9 +74,9 @@ header p{color:var(--muted);font-size:.9rem;margin-top:.65rem;line-height:1.6}
 /* ФОРМА */
 .fg{margin-bottom:.95rem}
 .fl{display:block;font-size:.7rem;font-weight:600;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em}
-select,input[type="number"]{width:100%;padding:.62rem .95rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:11px;font-size:.88rem;font-family:inherit;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s,background .2s;appearance:auto}
+select,input[type="number"]{width:100%;padding:.62rem .95rem;background:var(--inp-bg);border:1.5px solid var(--inp-border);border-radius:11px;font-size:.88rem;font-family:inherit;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s,background .2s;appearance:auto}
 select:focus,input[type="number"]:focus{border-color:var(--primary-dark);background:rgba(99,102,241,.08);box-shadow:0 0 0 3px rgba(99,102,241,.18)}
-select option{background:#1a2235;color:#f1f5f9}
+select option{background:var(--opt-bg);color:var(--text)}
 select:disabled{opacity:.4;cursor:not-allowed}
 
 .budget-hero{text-align:center;padding:.75rem 0 .35rem}
@@ -165,17 +192,48 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
   .card{border:1px solid rgba(255,255,255,.15);break-inside:avoid}
   body::before{display:none}
 }
+
+/* ЧЕКЛИСТ */
+.checklist{display:flex;flex-direction:column;gap:.35rem}
+.chk-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .6rem;border-radius:8px;cursor:pointer;transition:background .15s;font-size:.78rem;color:var(--muted);user-select:none}
+.chk-item:hover{background:rgba(255,255,255,.03)}
+.chk-item.done{color:var(--green);text-decoration:line-through;opacity:.7}
+.chk-box{width:18px;height:18px;border:1.5px solid var(--dim);border-radius:5px;display:grid;place-items:center;flex-shrink:0;transition:all .2s}
+.chk-item.done .chk-box{background:var(--green);border-color:var(--green);color:#fff}
+.chk-item.done .chk-box::after{content:'\2713';font-size:.7rem;color:#fff}
+.chk-progress{height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin:.5rem 0 .2rem;overflow:hidden}
+.chk-progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s ease}
+.cmp-tbl{width:100%;border-collapse:collapse;font-size:.76rem}
+.cmp-tbl th{text-align:left;padding:.4rem .5rem;font-size:.64rem;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.07)}
+.cmp-tbl td{padding:.4rem .5rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.annual-tbl{width:100%;border-collapse:collapse;font-size:.76rem}
+.annual-tbl th{text-align:left;padding:.45rem .5rem;font-size:.64rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid rgba(255,255,255,.08)}
+.annual-tbl td{padding:.4rem .5rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.76rem}
+.annual-tbl .total{font-weight:700;background:rgba(99,102,241,.06);color:var(--primary)}
+.annual-tbl .total td{border-top:2px solid rgba(99,102,241,.2);border-bottom:none}
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--primary);color:#fff;padding:.65rem 1.4rem;border-radius:12px;font-size:.82rem;font-weight:600;z-index:999;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1);box-shadow:0 8px 32px rgba(99,102,241,.35)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+@media(max-width:600px){
+  body{font-size:15px}
+  header h1{font-size:1.5rem}
+  .mg{grid-template-columns:1fr 1fr}
+  .sg{grid-template-columns:repeat(6,1fr)}
+  .sm{font-size:.36rem}
+  .stbl{font-size:.7rem}
+  .annual-tbl{font-size:.68rem}
+}
 </style>
 </head>
 <body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Тема" aria-label="Тема">🌗</button>
 
 <header>
   <div class="hi">
-    <div class="badge-top">✦ МедиаПлан Pro 2.0</div>
+    <div class="badge-top">🔓 ДЕМО-ВЕРСИЯ · 3 бесплатных расчёта</div>
     <h1>Калькулятор прогноза<br>Яндекс.Директ</h1>
-    <p>30+ категорий · 150+ подниш · Сезонность · ROMI · Готовый отчёт для клиента</p>
+    <p>43 категории · 200+ подниш · Сезонность · ROMI · Готовый отчёт для клиента</p>
     <div class="hstats">
-      <div class="hs"><div class="hs-v">150+</div><div class="hs-l">Подниш</div></div>
+      <div class="hs"><div class="hs-v">200+</div><div class="hs-l">Подниш</div></div>
       <div class="hs"><div class="hs-v">6</div><div class="hs-l">Регионов</div></div>
       <div class="hs"><div class="hs-v">ROI</div><div class="hs-l">Расчёт</div></div>
       <div class="hs"><div class="hs-v">PDF</div><div class="hs-l">Экспорт</div></div>
@@ -183,6 +241,18 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
     <a href="https://t.me/TaniiFill" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:rgba(129,140,248,.15);border:1px solid rgba(129,140,248,.35);border-radius:50px;padding:7px 18px;font-size:12px;color:#c4b5fd;text-decoration:none;font-weight:600;backdrop-filter:blur(8px)">✍️ Автор: Филатова Татьяна &nbsp;·&nbsp; @TaniiFill</a>
   </div>
 </header>
+
+<!-- DEMO MODAL -->
+<div id="demo-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(11,15,28,.92);backdrop-filter:blur(12px);justify-content:center;align-items:center;padding:20px">
+  <div style="background:linear-gradient(135deg,#1e1b4b,#1a1529);border:1px solid rgba(129,140,248,.35);border-radius:24px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 24px 80px rgba(99,102,241,.3)">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#818cf8;text-transform:uppercase;margin-bottom:10px">Демо-лимит исчерпан</div>
+    <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:12px;line-height:1.3">Вы использовали все<br>3 бесплатных расчёта</div>
+    <div style="font-size:13.5px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:24px">Полная версия содержит<br><strong style="color:#c4b5fd">43 категории · 200+ подниш · неограниченные расчёты</strong><br>PDF-отчёт, сезонность, ROMI и всё остальное</div>
+    <a href="https://t.me/TaniiFill" target="_blank" style="display:block;padding:15px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:14px;font-size:15px;font-weight:800;text-decoration:none;margin-bottom:12px;box-shadow:0 6px 24px rgba(99,102,241,.4)">✉️ Написать @TaniiFill и получить полную версию</a>
+    <div style="font-size:11px;color:rgba(255,255,255,.3)">© Филатова Татьяна · @TaniiFill</div>
+  </div>
+</div>
 
 <div class="wrap">
 <div class="layout">
@@ -194,7 +264,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 
     <div class="fg">
       <label class="fl">Категория ниши</label>
-      <select id="cat" onchange="onCat()">
+      <select id="cat" onchange="onCat()" aria-label="Категория ниши">
         <option value="">— Выберите категорию —</option>
         <option value="medicine">🏥 Медицина и здоровье</option>
         <option value="beauty">💅 Красота и уход</option>
@@ -221,12 +291,30 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
         <option value="pharma">💊 Аптека и медтовары</option>
         <option value="remont_tech">📱 Ремонт техники</option>
         <option value="wedding_cat">💍 Свадьба и торжества</option>
+        <option value="hobby">🎣 Хобби и увлечения</option>
+        <option value="marketplace">🏪 Маркетплейсы и селлеры</option>
+        <option value="entertainment">🎮 Развлечения и досуг</option>
+        <option value="pest">🐛 Дезинсекция и дезинфекция</option>
+        <option value="hvac">❄️ Климат и вентиляция</option>
+        <option value="ritual">🕯️ Ритуальные услуги</option>
+        <option value="jewelry">💎 Ювелирные изделия</option>
+        <option value="cowork">🏢 Коворкинги и аренда</option>
+        <option value="lab">🧪 Анализы и лаборатории</option>
+        <option value="agro">🌾 Сельское хозяйство</option>
+        <option value="telecom">📡 Связь и телеком</option>
+        <option value="beauty_clinic">💉 Косметологические клиники</option>
+        <option value="moving">🚚 Переезды и хранение</option>
+        <option value="franchise">💼 Франшизы и бизнес</option>
+        <option value="eco">🌱 Эко и чистая энергия</option>
+        <option value="wellness">🧘 Wellness и ЗОЖ</option>
+        <option value="music">🎵 Музыка и творчество</option>
+        <option value="security">🔒 Охрана и безопасность</option>
       </select>
     </div>
 
     <div class="fg">
       <label class="fl">Подниша</label>
-      <select id="subniche" onchange="onSubniche()" disabled>
+      <select id="subniche" onchange="onSubniche()" disabled aria-label="Подниша">
         <option value="">— Сначала выберите категорию —</option>
       </select>
       <div id="chips" class="chips" style="display:none"></div>
@@ -234,7 +322,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 
     <div class="fg">
       <label class="fl">Регион показов</label>
-      <select id="region">
+      <select id="region" aria-label="Регион показов">
         <option value="1.45">Москва и МО</option>
         <option value="1.2">Санкт-Петербург</option>
         <option value="1.0" selected>Крупный город (от 1 млн)</option>
@@ -250,18 +338,18 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
         <div class="bn" id="bd">30 000 ₽</div>
         <div class="bd" id="bdd">~1 000 ₽ в день</div>
       </div>
-      <input type="range" id="slider" min="5000" max="500000" step="5000" value="30000" oninput="onSlider()">
+      <input type="range" id="slider" min="5000" max="500000" step="5000" value="30000" oninput="onSlider()" aria-label="Месячный бюджет">
       <div class="rl"><span>5 000 ₽</span><span>500 000 ₽</span></div>
     </div>
 
     <div class="fg">
       <label class="fl">Или введите точную сумму, ₽</label>
-      <input type="number" id="bi" value="30000" min="1000" step="1000" placeholder="Например: 75 000">
+      <input type="number" id="bi" value="30000" min="1000" step="1000" placeholder="Например: 75 000" aria-label="Точный бюджет в рублях">
     </div>
 
     <div class="fg">
       <label class="fl">Конверсия сайта в лид, %</label>
-      <input type="number" id="cr" value="3" min="0.1" max="50" step="0.1">
+      <input type="number" id="cr" value="3" min="0.1" max="50" step="0.1" aria-label="Конверсия сайта в лид, процент">
       <div class="hint">Среднее по рынку: 2–5%. Не знаете — оставьте 3%</div>
     </div>
   </div>
@@ -271,21 +359,26 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
     <span class="opt-lbl">Необязательно — для расчёта ROMI и прибыли</span>
     <div class="fg">
       <label class="fl">Средний чек, ₽</label>
-      <input type="number" id="chk" min="0" step="100" placeholder="Например: 8 000">
+      <input type="number" id="chk" min="0" step="100" placeholder="Например: 8 000" aria-label="Средний чек в рублях">
     </div>
     <div class="fg">
       <label class="fl">Конверсия лида в продажу, %</label>
-      <input type="number" id="l2s" value="20" min="1" max="100" step="1">
+      <input type="number" id="l2s" value="20" min="1" max="100" step="1" aria-label="Конверсия лида в продажу, процент">
       <div class="hint">Как часто лид становится клиентом. Среднее: 20–30%</div>
     </div>
     <div class="fg">
       <label class="fl">Маржинальность, %</label>
-      <input type="number" id="mg" value="40" min="1" max="100" step="1">
+      <input type="number" id="mg" value="40" min="1" max="100" step="1" aria-label="Маржинальность, процент">
       <div class="hint">Доля прибыли в выручке. Для расчёта чистого ROI</div>
     </div>
-    <button class="btn" onclick="calc()">Рассчитать медиаплан →</button>
+    <div class="fg">
+      <label class="fl">Среднее кол-во покупок клиента (LTV)</label>
+      <input type="number" id="ltv" value="1" min="1" max="50" step="1" aria-label="Среднее количество покупок клиента LTV">
+      <div class="hint">Сколько раз клиент покупает за период. 1 = разовая покупка</div>
+    </div>
+    <button class="btn" onclick="calc()" aria-label="Рассчитать медиаплан">Рассчитать медиаплан →</button>
     <div id="calc-error" style="display:none;margin-top:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:#fca5a5;text-align:center">⚠️ Выберите категорию и подниш</div>
-    <div id="print-tip" style="display:none;margin-top:10px;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.3);border-radius:10px;padding:10px 14px;font-size:12px;color:#a5b4fc;text-align:center">📱 Для сохранения PDF: откройте файл в Safari → Поделиться → Напечатать → Сохранить как PDF</div>
+    <div id="print-tip" style="display:none;margin-top:10px;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.3);border-radius:10px;padding:10px 14px;font-size:12px;color:#a5b4fc;text-align:center">📱 Для PDF: откройте в Safari → Поделиться → Напечатать → Сохранить как PDF</div>
   </div>
 </div>
 
@@ -304,12 +397,6 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </div>
 
 <script>
-// ============================================================
-// БАЗА ДАННЫХ: категории → подниши
-// cpcMin/cpcMax — руб, ctr — доля, cr — конверсия сайта,
-// searchShare — доля поиска в бюджете
-// season[0..11] — коэффициент спроса по месяцам (янв–дек)
-// ============================================================
 const DB = {
   medicine: {
     label: '🏥 Медицина и здоровье',
@@ -565,7 +652,789 @@ const DB = {
       flowers_wed:  { name:'Свадебная флористика',          cpcMin:28,  cpcMax:72,  ctr:.10, cr:.042, ss:.50, comp:'Низкая',    keys:['свадебный букет невесты цена','флорист на свадьбу','оформление свадьбы цветами','бутаньерка'],  season:[.65,.7,.85,1,1,1,.95,.85,.8,.75,.65,.7],  tip:'Сезон — апрель–сентябрь. Комплект "букет + оформление" конвертирует лучше раздельных услуг.' },
     }
   },
+  hobby:{label:'🎣 Хобби и увлечения',subs:{
+    fishing:{name:'Товары для рыбалки',cpcMin:20,cpcMax:55,ctr:.11,cr:.040,ss:.48,comp:'Низкая',keys:['удочка купить','спиннинг цена','рыболовные снасти','катушка для рыбалки','приманки купить'],season:[.7,.7,.8,.95,1,1,.95,.95,.85,.8,.7,.7],tip:'Сезонность выраженная — март–октябрь. Смарт-баннеры по фиду. Укажи бренд и тип в заголовке.'},
+    hunting:{name:'Охота и экипировка',cpcMin:25,cpcMax:65,ctr:.10,cr:.035,ss:.50,comp:'Низкая',keys:['экипировка для охоты','оружейный магазин','одежда для охоты','бинокль охотничий','патроны купить'],season:[.7,.7,.8,.85,.8,.7,.7,.8,1,1,.95,.8],tip:'Осень — главный сезон. Ограничения на рекламу оружия — работай через экипировку и аксессуары.'},
+    crafts:{name:'Рукоделие и хендмейд',cpcMin:15,cpcMax:42,ctr:.12,cr:.050,ss:.45,comp:'Низкая',keys:['товары для рукоделия','пряжа купить','бисер оптом','набор для вышивки','ткани для шитья'],season:[.85,.85,.9,.9,.9,.85,.8,.85,.95,1,1,1.1],tip:'Женская аудитория 28–55. Пики — осень-зима (сезон хобби). Мастер-классы как лид-магнит.'},
+    boardgames:{name:'Настольные игры',cpcMin:18,cpcMax:48,ctr:.11,cr:.045,ss:.45,comp:'Низкая',keys:['настольные игры купить','настолки для компании','настольная игра для детей','монополия цена'],season:[.8,.8,.85,.85,.85,.8,.75,.8,.9,.95,1,1.3],tip:'Пик — ноябрь-декабрь (подарки). Возрастная сегментация (дети/взрослые) обязательна.'},
+    aquarium:{name:'Аквариумистика',cpcMin:18,cpcMax:50,ctr:.10,cr:.040,ss:.48,comp:'Низкая',keys:['аквариум купить цена','рыбки аквариумные','фильтр для аквариума','аквариум на заказ'],season:[.9,.9,.95,.95,1,.95,.9,.9,.95,.95,.95,1],tip:'Спрос стабильный. Комплекты "аквариум под ключ" конвертируют лучше отдельных товаров.'},
+  }},
+  marketplace:{label:'🏪 Маркетплейсы и селлеры',subs:{
+    wb_services:{name:'Услуги для селлеров WB',cpcMin:45,cpcMax:120,ctr:.09,cr:.035,ss:.62,comp:'Средняя',keys:['выход на вайлдберриз','менеджер wb','карточки вайлдберриз','продвижение на wb','аналитика wildberries'],season:[.9,.95,1,1,1,.9,.85,.9,1,1,.95,.9],tip:'Горящая ниша. Акцент на ROI и кейсы селлеров. Аудитория — начинающие и средние продавцы.'},
+    ozon_services:{name:'Услуги для селлеров Ozon',cpcMin:40,cpcMax:110,ctr:.09,cr:.035,ss:.62,comp:'Средняя',keys:['выход на озон','менеджер ozon','продвижение на озоне','ozon seller помощь'],season:[.9,.95,1,1,1,.9,.85,.9,1,1,.95,.9],tip:'Аналогичная WB ниша, но конкуренция ниже. Кейсы и конкретные цифры продаж — главный оффер.'},
+    fulfillment:{name:'Фулфилмент',cpcMin:50,cpcMax:135,ctr:.08,cr:.028,ss:.68,comp:'Средняя',keys:['фулфилмент для маркетплейсов','фулфилмент центр цена','фулфилмент wb ozon','хранение товаров склад'],season:[.85,.9,.95,1,1,.9,.8,.9,1,1,.95,.95],tip:'B2B аудитория. Тарифы и понятная система ценообразования — ключевой оффер.'},
+    product_photo:{name:'Фотосъёмка товаров',cpcMin:30,cpcMax:80,ctr:.10,cr:.045,ss:.55,comp:'Низкая',keys:['фотосъёмка товаров цена','инфографика для маркетплейса','фото для вайлдберриз','предметная съёмка'],season:[.9,.9,.95,1,1,.9,.85,.9,1,1,1,.95],tip:'Портфолио — решающий фактор. Пакеты (фото+инфографика+видео) конвертируют лучше отдельных услуг.'},
+    marketplace_ads:{name:'Реклама на маркетплейсах',cpcMin:40,cpcMax:105,ctr:.09,cr:.032,ss:.60,comp:'Средняя',keys:['реклама на wildberries','продвижение на маркетплейсах','настройка рекламы ozon','маркетплейс трафик'],season:[.9,.95,1,1,1,.9,.85,.9,1,1,.95,.9],tip:'Кейсы с ростом продаж в % — лучший контент. Аудитория уже продаёт, ищет масштабирование.'},
+  }},
+  entertainment:{label:'🎮 Развлечения и досуг',subs:{
+    quest_room:{name:'Квесты в реальности',cpcMin:28,cpcMax:72,ctr:.11,cr:.055,ss:.52,comp:'Средняя',keys:['квест рядом забронировать','квест для компании','страшный квест','квест для детей'],season:[.9,.9,.95,.95,.95,.9,.85,.85,.95,1,1,1.1],tip:'Выходные и праздники — пик бронирований. Формат "подарочный сертификат" — отличный оффер к праздникам.'},
+    bowling:{name:'Боулинг и бильярд',cpcMin:22,cpcMax:58,ctr:.11,cr:.050,ss:.50,comp:'Низкая',keys:['боулинг забронировать','бильярд рядом цена','боулинг для детей','аренда дорожки боулинг'],season:[.95,.9,.9,.85,.85,.8,.75,.8,.95,1,1,1.1],tip:'Пики — выходные, праздники, зима. Корпоративы — отдельная B2B кампания с хорошим средним чеком.'},
+    karaoke:{name:'Караоке',cpcMin:25,cpcMax:65,ctr:.11,cr:.050,ss:.50,comp:'Низкая',keys:['караоке бар забронировать','караоке комната цена','караоке для компании','караоке рядом'],season:[.9,.9,.9,.9,.9,.85,.8,.85,.95,1,1,1.1],tip:'Вечернее время — 90% трафика. Пакеты (караоке+меню) конвертируют лучше. Гео до 5 км.'},
+    trampoline:{name:'Батутные парки',cpcMin:20,cpcMax:55,ctr:.11,cr:.055,ss:.48,comp:'Низкая',keys:['батутный парк цена','батутный центр рядом','детский развлекательный центр','аттракционы для детей'],season:[.9,.9,.9,.85,.85,.75,.7,.8,.95,1,1,1.1],tip:'Родители с детьми 5–14 — основная ЦА. Каникулы и выходные — пиковые дни. День рождения в парке — отличный оффер.'},
+    vr_club:{name:'VR-клубы и кибер-арены',cpcMin:25,cpcMax:68,ctr:.10,cr:.048,ss:.52,comp:'Низкая',keys:['vr арена забронировать','виртуальная реальность игры','vr клуб рядом','кибер арена цена'],season:[.9,.9,.9,.85,.85,.8,.75,.8,.95,1,1,1.15],tip:'Молодая аудитория 14–35. Пакеты для дней рождения и корпоративов. Видео игрового процесса в РСЯ.'},
+  }},
+  pest:{label:'🐛 Дезинсекция и дезинфекция',subs:{
+    cockroaches:{name:'Уничтожение тараканов',cpcMin:40,cpcMax:105,ctr:.10,cr:.060,ss:.70,comp:'Средняя',keys:['уничтожение тараканов цена','травля тараканов','обработка от тараканов','дезинсекция квартиры'],season:[.85,.85,.9,.95,1,1,.95,.95,.9,.85,.8,.8],tip:'Горячий трафик — человек в проблеме. Гарантия результата + бесплатный повторный выезд — лучший оффер.'},
+    bedbugs:{name:'Уничтожение клопов',cpcMin:45,cpcMax:115,ctr:.10,cr:.060,ss:.72,comp:'Средняя',keys:['уничтожение клопов цена','обработка от клопов','клопы в квартире что делать','травля клопов'],season:[.8,.8,.85,.9,.95,1,1,1,.95,.85,.8,.75],tip:'Пик — лето (путешествия → завоз клопов). Анонимность услуги важна — не все хотят публичности.'},
+    rats:{name:'Уничтожение грызунов',cpcMin:38,cpcMax:98,ctr:.10,cr:.055,ss:.68,comp:'Средняя',keys:['дератизация цена','уничтожение мышей','крысы в доме вызвать службу','обработка от грызунов'],season:[.85,.9,.95,.9,.85,.8,.8,.85,.95,1,1,.9],tip:'Осень-зима — грызуны идут в тепло. Коммерческие объекты — отдельная B2B кампания.'},
+    ticks:{name:'Обработка от клещей',cpcMin:35,cpcMax:90,ctr:.10,cr:.055,ss:.65,comp:'Низкая',keys:['обработка от клещей участок','акарицидная обработка цена','противоклещевая обработка','дачный участок от клещей'],season:[.3,.5,.95,1,1,.85,.7,.65,.55,.4,.3,.3],tip:'Жёсткая сезонность — март–июнь. Начать рекламу в феврале. Площадь участка в объявлении.'},
+    mold:{name:'Удаление плесени',cpcMin:35,cpcMax:88,ctr:.09,cr:.050,ss:.65,comp:'Низкая',keys:['удаление плесени профессиональное','обработка от грибка стен','плесень в ванной убрать','антиплесень обработка'],season:[.85,.85,.9,.95,1,.95,.9,.9,.95,.95,.9,.85],tip:'Гарантия от повторного появления — ключевой оффер. Фото "до/после" работают отлично.'},
+  }},
+  hvac:{label:'❄️ Климат и вентиляция',subs:{
+    conditioner:{name:'Кондиционеры (продажа и монтаж)',cpcMin:35,cpcMax:95,ctr:.10,cr:.045,ss:.62,comp:'Средняя',keys:['кондиционер купить с установкой','сплит-система цена','монтаж кондиционера','кондиционер для квартиры'],season:[.4,.5,.8,1,1,1,.85,.7,.55,.4,.35,.35],tip:'Пик — апрель–июль. Начни рекламу в марте. Цена с установкой в заголовке — must have.'},
+    ventilation:{name:'Вентиляция (монтаж)',cpcMin:55,cpcMax:145,ctr:.08,cr:.025,ss:.68,comp:'Средняя',keys:['вентиляция монтаж цена','приточная вентиляция','вытяжная вентиляция','проект вентиляции'],season:[.85,.85,.9,1,1,.9,.8,.85,.95,.95,.9,.85],tip:'B2B + B2C. Проект + монтаж под ключ — лучший оффер. Длинный цикл для коммерческих объектов.'},
+    heating:{name:'Отопление и котлы',cpcMin:45,cpcMax:120,ctr:.09,cr:.035,ss:.65,comp:'Средняя',keys:['котёл отопления купить','монтаж отопления под ключ','тёплый пол цена','газовый котёл установка'],season:[.7,.7,.75,.8,.85,.8,.75,.85,1,1,1,.85],tip:'Пик — август–ноябрь (подготовка к зиме). Гарантийное обслуживание — важный аргумент.'},
+    water_heater:{name:'Водонагреватели',cpcMin:30,cpcMax:78,ctr:.10,cr:.045,ss:.58,comp:'Низкая',keys:['бойлер купить цена','водонагреватель установка','бойлер для квартиры','проточный водонагреватель'],season:[.8,.8,.85,.9,.95,.95,.9,.85,.85,.85,.8,.8],tip:'Пик — лето (отключения горячей воды). Установка в цену — стандартный оффер.'},
+  }},
+  ritual:{label:'🕯️ Ритуальные услуги',subs:{
+    funeral:{name:'Похоронное бюро',cpcMin:55,cpcMax:145,ctr:.09,cr:.060,ss:.75,comp:'Средняя',keys:['похоронное бюро цена','организация похорон','ритуальные услуги','похоронный агент вызов'],season:[1,1,1,1,1,1,1,1,1,1,1,1],tip:'Спрос стабилен круглый год. Срочность максимальная. Цена и скорость приезда — ключевые факторы.'},
+    monuments:{name:'Памятники и оградки',cpcMin:40,cpcMax:100,ctr:.09,cr:.035,ss:.60,comp:'Средняя',keys:['памятник на могилу цена','оградка на кладбище','гранитный памятник заказать','благоустройство могил'],season:[.7,.75,.9,1,1,1,.9,.85,.85,.8,.7,.65],tip:'Пик — весна–лето. Каталог с ценами на сайте обязателен. Рассрочка — хороший оффер.'},
+    cremation:{name:'Кремация',cpcMin:50,cpcMax:130,ctr:.08,cr:.055,ss:.72,comp:'Низкая',keys:['кремация цена','кремация человека стоимость','крематорий запись','урна для праха'],season:[1,1,1,1,1,1,1,1,1,1,1,1],tip:'Деликатная тема — объявления сдержанные. Полный пакет услуг под ключ конвертирует лучше.'},
+  }},
+  jewelry:{label:'💎 Ювелирные изделия',subs:{
+    jewelry_shop:{name:'Ювелирный магазин',cpcMin:30,cpcMax:80,ctr:.10,cr:.035,ss:.50,comp:'Средняя',keys:['ювелирный магазин онлайн','золотое кольцо купить','серьги серебро цена','цепочка золотая'],season:[.8,.9,1,.85,.85,.85,.8,.85,.9,.9,.95,1.2],tip:'Пики — 8 марта, 14 февраля, НГ. Смарт-баннеры по фиду. Бесплатная доставка + подарочная упаковка.'},
+    jewelry_repair:{name:'Ремонт ювелирных изделий',cpcMin:28,cpcMax:72,ctr:.10,cr:.055,ss:.65,comp:'Низкая',keys:['ремонт цепочки цена','ремонт кольца','пайка серебра','ювелирная мастерская рядом'],season:[.9,.9,.95,1,1,.9,.85,.9,.95,.9,.9,.95],tip:'Геотаргетинг обязателен. Типовые цены в объявлении снижают нецелевые клики.'},
+    watch_repair:{name:'Ремонт часов',cpcMin:30,cpcMax:78,ctr:.10,cr:.050,ss:.65,comp:'Низкая',keys:['ремонт часов цена','замена батарейки в часах','ремонт механических часов','часовой мастер'],season:[.9,.9,.95,1,1,.9,.85,.9,.95,.9,.9,.95],tip:'Дешёвые услуги (замена батарейки) приводят клиентов на дорогие (ремонт механики).'},
+    engraving:{name:'Гравировка',cpcMin:22,cpcMax:58,ctr:.10,cr:.048,ss:.55,comp:'Низкая',keys:['гравировка на кольце','лазерная гравировка цена','гравировка на подарок','гравировка на заказ'],season:[.8,.9,1,.85,.85,.85,.8,.85,.9,.9,.95,1.2],tip:'Подарочная тематика — пики к праздникам. РСЯ с примерами работ отлично конвертирует.'},
+  }},
+  cowork:{label:'🏢 Коворкинги и аренда',subs:{
+    coworking:{name:'Коворкинг',cpcMin:40,cpcMax:105,ctr:.09,cr:.038,ss:.62,comp:'Средняя',keys:['коворкинг цена','рабочее место аренда','коворкинг рядом','коворкинг на день'],season:[.85,.9,1,1,1,.9,.8,.85,.95,1,1,.85],tip:'Гео + удобство (метро, парковка) — ключевые факторы. Пробный день бесплатно.'},
+    meeting_room:{name:'Переговорные комнаты',cpcMin:35,cpcMax:90,ctr:.10,cr:.045,ss:.58,comp:'Низкая',keys:['переговорная аренда час','переговорная комната цена','зал для встречи аренда'],season:[.85,.9,1,1,1,.9,.75,.8,.95,1,1,.85],tip:'B2B аудитория. Часовая цена и оборудование (экран, камера) в объявлении.'},
+    virtual_office:{name:'Виртуальный офис',cpcMin:50,cpcMax:130,ctr:.08,cr:.030,ss:.65,comp:'Средняя',keys:['виртуальный офис аренда','юридический адрес аренда','адрес для регистрации ООО','почтовый адрес офис'],season:[.9,.95,1,1,.95,.9,.8,.85,.95,1,1,.9],tip:'Юридический адрес — основной запрос. Акцент на престижность района и скорость оформления.'},
+    event_space:{name:'Аренда площадок',cpcMin:35,cpcMax:90,ctr:.10,cr:.040,ss:.55,comp:'Средняя',keys:['аренда зала для мероприятия','площадка для праздника','лофт для вечеринки','зал для конференции'],season:[.8,.85,.9,.95,.95,1,.85,.85,.9,.95,1,1.1],tip:'Фото площадки — решающий фактор. Калькулятор стоимости (часы × вместимость) повышает конверсию.'},
+  }},
+  lab:{label:'🧪 Анализы и лаборатории',subs:{
+    blood_test:{name:'Анализы крови',cpcMin:25,cpcMax:68,ctr:.11,cr:.060,ss:.62,comp:'Средняя',keys:['анализ крови цена','сдать анализы рядом','общий анализ крови','биохимический анализ крови'],season:[1,1,1,.9,.85,.8,.75,.8,.95,1,1,1],tip:'Геотаргетинг обязателен. Скорость результата (1 день) — ключевой оффер.'},
+    genetic_test:{name:'Генетические тесты',cpcMin:35,cpcMax:90,ctr:.09,cr:.040,ss:.58,comp:'Низкая',keys:['генетический тест цена','ДНК тест на отцовство','тест на наследственные заболевания','генетический анализ'],season:[.95,.95,1,1,.95,.9,.85,.9,.95,1,1,.95],tip:'Тесты на отцовство — самый конвертируемый запрос. Конфиденциальность — важный аргумент.'},
+    allergy_test:{name:'Тесты на аллергию',cpcMin:28,cpcMax:72,ctr:.10,cr:.050,ss:.60,comp:'Низкая',keys:['аллергопробы цена','тест на аллергию где сдать','аллергочип анализ','аллерголог запись'],season:[.8,.85,.95,1,1,.9,.8,.85,.95,.9,.85,.8],tip:'Пик — весна (поллиноз). Комплексные панели аллергенов — хороший оффер для upsell.'},
+    checkup:{name:'Чекап / комплексное обследование',cpcMin:40,cpcMax:100,ctr:.09,cr:.040,ss:.60,comp:'Средняя',keys:['чекап организма цена','полное обследование организма','медосмотр комплексный','чекап для женщин'],season:[1,1,.95,.9,.85,.8,.7,.8,.95,1,1,1],tip:'Целевая аудитория — 30–55 лет, выше среднего дохода. Гендерные чекапы конвертируют лучше.'},
+  }},
+  agro:{label:'🌾 Сельское хозяйство',subs:{
+    fertilizers:{name:'Удобрения оптом',cpcMin:30,cpcMax:78,ctr:.09,cr:.028,ss:.65,comp:'Низкая',keys:['удобрения оптом цена','минеральные удобрения купить','удобрения для фермеров','NPK удобрения'],season:[.5,.65,.95,1,1,.85,.7,.7,.75,.65,.5,.45],tip:'B2B — фермеры и агропредприятия. Объём заказа и логистика — ключевые факторы.'},
+    seeds_wholesale:{name:'Семена оптом',cpcMin:25,cpcMax:65,ctr:.09,cr:.030,ss:.60,comp:'Низкая',keys:['семена оптом купить','семена овощей от производителя','посевной материал цена','семена подсолнечника оптом'],season:[.5,.7,1,1,.85,.65,.55,.55,.6,.55,.5,.5],tip:'Пик — февраль–апрель. Сертификаты качества и урожайность в объявлении.'},
+    farm_equipment:{name:'Сельхозтехника',cpcMin:55,cpcMax:145,ctr:.07,cr:.018,ss:.70,comp:'Средняя',keys:['трактор купить цена','сельхозтехника б/у','минитрактор для фермы','навесное оборудование'],season:[.6,.7,.9,1,1,.85,.75,.8,.85,.75,.6,.55],tip:'Длинный цикл B2B. Лизинг и кредит — важные офферы. Гарантия и сервисное обслуживание.'},
+    greenhouse_farm:{name:'Тепличные комплексы',cpcMin:45,cpcMax:115,ctr:.08,cr:.022,ss:.65,comp:'Низкая',keys:['теплица промышленная цена','тепличный комплекс под ключ','фермерская теплица','теплица для бизнеса'],season:[.5,.65,.9,1,.95,.8,.7,.7,.8,.7,.55,.5],tip:'B2B ниша. Проект + монтаж под ключ. ROI-калькулятор на сайте повышает конверсию.'},
+  }},
+  telecom:{label:'📡 Связь и телеком',subs:{
+    internet_home:{name:'Интернет-провайдер',cpcMin:40,cpcMax:105,ctr:.09,cr:.040,ss:.65,comp:'Высокая',keys:['подключить интернет домой','интернет провайдер тарифы','домашний интернет цена','Wi-Fi подключить'],season:[.9,.9,.95,1,1,.9,.8,.85,1,1,.95,.9],tip:'Гео по жилым массивам. "Первый месяц бесплатно" — стандартный конверсионный оффер.'},
+    office_phone:{name:'IP-телефония и АТС',cpcMin:55,cpcMax:140,ctr:.08,cr:.028,ss:.68,comp:'Средняя',keys:['IP телефония для офиса','виртуальная АТС цена','подключить SIP','телефония для бизнеса'],season:[.9,.9,.95,1,1,.9,.8,.85,.95,1,1,.9],tip:'B2B аудитория. Бесплатный тестовый период — ключевой конверсионный элемент.'},
+    cctv_setup:{name:'Видеонаблюдение',cpcMin:40,cpcMax:105,ctr:.09,cr:.040,ss:.62,comp:'Средняя',keys:['видеонаблюдение для квартиры','камера наблюдения установка','видеонаблюдение для дома цена','IP камера купить'],season:[.85,.85,.9,.95,1,.95,.9,.9,.95,.95,.9,.9],tip:'B2C и B2B — разные кампании. Комплект (камеры + установка + хранение) конвертирует лучше.'},
+  }},
+  beauty_clinic:{label:'💉 Косметологические клиники',subs:{
+    laser_cosm:{name:'Лазерная косметология',cpcMin:70,cpcMax:185,ctr:.08,cr:.035,ss:.62,comp:'Высокая',keys:['лазерное удаление пигментации','лазерное омоложение цена','фракционный лазер','лазерная шлифовка лица'],season:[.85,.9,1,1,1,.9,.75,.8,.95,1,1,.85],tip:'Осень-весна — лучший сезон (нет активного солнца). Фото результатов обязательны.'},
+    injection:{name:'Инъекционная косметология',cpcMin:65,cpcMax:175,ctr:.09,cr:.040,ss:.58,comp:'Высокая',keys:['ботокс цена','филлеры губы стоимость','мезотерапия лица','биоревитализация цена'],season:[.85,.9,1,1,1,.9,.75,.8,.95,1,1,.9],tip:'Весна и осень — пики. Фото "до/после" + отзывы — главные конверсионные элементы.'},
+    body_sculpt:{name:'Моделирование фигуры',cpcMin:55,cpcMax:145,ctr:.09,cr:.035,ss:.55,comp:'Средняя',keys:['липолитики цена','криолиполиз живота','LPG массаж цена','прессотерапия стоимость'],season:[.85,.9,1,1,1,.95,.8,.8,.9,.85,.8,.85],tip:'Пик — весна (подготовка к лету). Курсовое лечение — главный upsell.'},
+    trichology:{name:'Трихология (лечение волос)',cpcMin:50,cpcMax:130,ctr:.09,cr:.038,ss:.60,comp:'Низкая',keys:['трихолог цена консультация','выпадение волос лечение','мезотерапия для волос','плазмолифтинг головы'],season:[.9,.9,.95,1,1,.9,.8,.85,.95,1,1,.9],tip:'Мужчины 30–50 и женщины 25–45. Бесплатная диагностика — лучший оффер.'},
+  }},
+  moving:{label:'🚚 Переезды и хранение',subs:{
+    flat_moving:{name:'Квартирный переезд',cpcMin:38,cpcMax:95,ctr:.10,cr:.050,ss:.68,comp:'Средняя',keys:['квартирный переезд цена','переезд недорого','переезд с грузчиками','перевезти мебель'],season:[.85,.85,.9,1,1,.95,.85,.9,1,1,.9,.8],tip:'Срочность — главный триггер. Цена за час + количество грузчиков в объявлении.'},
+    office_moving:{name:'Офисный переезд',cpcMin:50,cpcMax:130,ctr:.09,cr:.035,ss:.68,comp:'Средняя',keys:['офисный переезд под ключ','переезд компании','перевезти офис цена','корпоративный переезд'],season:[.85,.9,.95,1,1,.9,.8,.85,.95,1,1,.85],tip:'B2B аудитория. Акцент на минимальный простой и сохранность техники.'},
+    piano_moving:{name:'Перевозка пианино и сейфов',cpcMin:45,cpcMax:115,ctr:.10,cr:.055,ss:.70,comp:'Низкая',keys:['перевозка пианино цена','поднять пианино на этаж','перевезти сейф','такелажные работы'],season:[.85,.85,.9,1,1,.95,.9,.9,.95,.95,.9,.85],tip:'Нишевая услуга с низкой конкуренцией. Опыт и оборудование — ключевые аргументы.'},
+    storage:{name:'Хранение вещей (склад)',cpcMin:35,cpcMax:88,ctr:.10,cr:.045,ss:.60,comp:'Средняя',keys:['хранение вещей цена','склад для хранения мебели','бокс хранения аренда','селфсторадж'],season:[.85,.85,.9,.95,1,.95,.9,.9,.95,.95,.9,.85],tip:'Пик — лето (сезон ремонтов). Калькулятор площади бокса повышает конверсию.'},
+  }},
+  franchise:{label:'💼 Франшизы и бизнес',subs:{
+    buy_franchise:{name:'Покупка франшизы',cpcMin:55,cpcMax:145,ctr:.08,cr:.025,ss:.65,comp:'Средняя',keys:['франшизы каталог','купить франшизу недорого','франшиза общепит','прибыльные франшизы','франшиза с минимальными вложениями'],season:[.9,.95,1,1,1,.9,.8,.85,.95,1,1,.85],tip:'Инвестиционная аудитория. ROI и сроки окупаемости — ключевые метрики в объявлении.'},
+    register_biz:{name:'Регистрация ООО/ИП',cpcMin:60,cpcMax:155,ctr:.08,cr:.035,ss:.70,comp:'Средняя',keys:['регистрация ООО цена','открыть ИП стоимость','регистрация компании под ключ','ликвидация ООО'],season:[.9,1,1,.95,.9,.85,.8,.85,.95,1,1,1],tip:'Пики — начало года и осень. Цена + сроки в объявлении. Пакет "под ключ".'},
+    business_plan:{name:'Бизнес-планирование',cpcMin:50,cpcMax:130,ctr:.08,cr:.028,ss:.62,comp:'Низкая',keys:['бизнес план заказать','бизнес план для инвестора','финмодель для бизнеса','ТЭО проекта'],season:[.9,.95,1,1,.95,.9,.8,.85,.95,1,1,.9],tip:'Стартапы и действующий бизнес. Кейсы привлечённых инвестиций — главный оффер.'},
+  }},
+  eco:{label:'🌱 Эко и чистая энергия',subs:{
+    eco_shop:{name:'Эко-товары',cpcMin:22,cpcMax:58,ctr:.10,cr:.042,ss:.48,comp:'Низкая',keys:['эко товары магазин','натуральная косметика','эко средства для уборки','органические продукты купить'],season:[.85,.85,.9,.95,1,.95,.85,.9,.95,1,1,.95],tip:'ЗОЖ-аудитория. РСЯ с эко-контентом работает отлично. Подписка на доставку — отличный оффер.'},
+    solar_panels:{name:'Солнечные панели',cpcMin:45,cpcMax:115,ctr:.08,cr:.025,ss:.60,comp:'Низкая',keys:['солнечные панели для дома цена','солнечная электростанция купить','солнечные батареи дача'],season:[.6,.65,.8,.95,1,1,.9,.85,.8,.7,.6,.55],tip:'Растущая ниша. Калькулятор окупаемости на сайте — мощный конверсионный элемент.'},
+    water_filter:{name:'Фильтры для воды',cpcMin:30,cpcMax:78,ctr:.10,cr:.045,ss:.58,comp:'Средняя',keys:['фильтр для воды купить','очистка воды для дома','обратный осмос цена','фильтр под мойку'],season:[.85,.85,.9,.95,1,.95,.9,.9,.95,.9,.85,.85],tip:'Анализ воды бесплатно — отличный лид-магнит. Замена картриджей — повторные продажи.'},
+    recycling:{name:'Утилизация и вывоз мусора',cpcMin:35,cpcMax:90,ctr:.09,cr:.038,ss:.65,comp:'Низкая',keys:['утилизация отходов цена','вывоз строительного мусора','утилизация техники','вывоз мебели'],season:[.8,.8,.85,.95,1,1,.9,.9,.95,.9,.85,.8],tip:'B2C (вывоз мусора) и B2B (утилизация для предприятий) — разные кампании.'},
+  }},
+  wellness:{label:'🧘 Wellness и ЗОЖ',subs:{
+    dietolog:{name:'Диетолог / Нутрициолог',cpcMin:35,cpcMax:90,ctr:.09,cr:.040,ss:.55,comp:'Средняя',keys:['диетолог онлайн','нутрициолог цена','план питания составить','консультация диетолога'],season:[1,1,.95,.95,.95,.85,.7,.8,.95,1,1,.85],tip:'Пики — январь и весна ("похудеть к лету"). Онлайн-формат расширяет гео. Результаты клиентов — лучший контент.'},
+    detox:{name:'Детокс-программы и СПА',cpcMin:40,cpcMax:105,ctr:.09,cr:.038,ss:.55,comp:'Низкая',keys:['детокс программа цена','детокс спа выходного дня','голодание программа','очищение организма'],season:[1,1,.95,.95,.9,.85,.75,.8,.95,1,1,.85],tip:'Женская аудитория 28–50. Пик — январь (после праздников) и весна. Фото интерьера и атмосферы.'},
+    health_coach:{name:'ЗОЖ-коучинг',cpcMin:30,cpcMax:80,ctr:.09,cr:.035,ss:.52,comp:'Низкая',keys:['коуч по здоровью','зож консультация','марафон здоровья','программа оздоровления'],season:[1,1,.95,.9,.9,.85,.7,.75,.95,1,1,.85],tip:'Январь — пиковый месяц (новогодние обещания). Бесплатная диагностика или марафон — отличный лид-магнит.'},
+    meditation:{name:'Медитация и ментальное здоровье',cpcMin:25,cpcMax:65,ctr:.10,cr:.040,ss:.50,comp:'Низкая',keys:['медитация онлайн','курс медитации','приложение для медитации','ретрит медитация'],season:[1,1,.95,.9,.9,.85,.75,.8,.95,1,1,.9],tip:'Растущая ниша. Онлайн-формат идеален. Пробное занятие бесплатно — стандартный оффер.'},
+  }},
+  music:{label:'🎵 Музыка и творчество',subs:{
+    instruments:{name:'Музыкальные инструменты',cpcMin:25,cpcMax:68,ctr:.10,cr:.035,ss:.50,comp:'Средняя',keys:['гитара купить','синтезатор цена','пианино купить','укулеле цена','барабаны купить'],season:[.85,.85,.9,.9,.9,.85,.75,.85,.95,.95,1,1.2],tip:'Пик — НГ (подарки) и сентябрь (начало учебного года). Смарт-баннеры по фиду.'},
+    music_lessons:{name:'Уроки музыки',cpcMin:30,cpcMax:78,ctr:.10,cr:.045,ss:.55,comp:'Низкая',keys:['уроки гитары цена','школа музыки запись','вокал обучение','уроки фортепиано для начинающих'],season:[.85,.85,.9,.9,.85,.75,.6,.7,1,1,.95,.85],tip:'Пик — сентябрь. Пробный урок бесплатно. Разделяй по инструментам и возрасту.'},
+    sound_studio:{name:'Звукозапись и студия',cpcMin:35,cpcMax:90,ctr:.09,cr:.038,ss:.55,comp:'Низкая',keys:['студия звукозаписи цена','записать песню','аренда студии','сведение и мастеринг'],season:[.9,.9,.95,1,1,.95,.85,.9,.95,1,1,.95],tip:'Портфолио и отзывы артистов — решающий фактор. Пакеты (запись+сведение) конвертируют лучше.'},
+    dj_services:{name:'DJ и звуковое оборудование',cpcMin:28,cpcMax:72,ctr:.10,cr:.042,ss:.52,comp:'Низкая',keys:['DJ на свадьбу цена','аренда звука','DJ на корпоратив','аренда музыкального оборудования'],season:[.75,.8,.85,.9,.95,1,.9,.9,.85,.9,1,1.1],tip:'Лето и НГ — пики. Свадьбы/корпоративы — основные заказы. Видео с мероприятий — лучший контент.'},
+  }},
+  security:{label:'🔒 Охрана и безопасность',subs:{
+    security_guard:{name:'ЧОП / Физическая охрана',cpcMin:55,cpcMax:140,ctr:.08,cr:.028,ss:.70,comp:'Средняя',keys:['охрана объекта цена','ЧОП услуги','охранник нанять','пульт охрана квартира'],season:[.9,.9,.95,1,1,.95,.85,.9,.95,1,1,.9],tip:'B2B аудитория. Лицензии и опыт — ключевые аргументы. Долгосрочные контракты — цель.'},
+    fire_safety:{name:'Пожарная безопасность',cpcMin:45,cpcMax:115,ctr:.08,cr:.030,ss:.65,comp:'Низкая',keys:['пожарная сигнализация установка','пожарный аудит','огнетушители купить','пожарная безопасность предприятия'],season:[.85,.9,.95,1,1,.9,.8,.85,.95,1,1,.9],tip:'B2B ниша. Акцент на соответствие законодательству и штрафы за нарушения.'},
+    alarm_home:{name:'Сигнализация для дома',cpcMin:40,cpcMax:100,ctr:.09,cr:.042,ss:.62,comp:'Средняя',keys:['сигнализация для квартиры цена','умный дом безопасность','GSM сигнализация','датчик движения купить'],season:[.9,.9,.95,1,1,.9,.85,.9,.95,.95,.9,.9],tip:'Пик — весна-лето (дачные кражи). Комплект оборудования + установка — конвертирует лучше.'},
+  }},
 };
+
+const NEG_BASE=['бесплатно','скачать','реферат','курсовая','дипломная','вакансия','вакансии','работа','зарплата','форум','отзывы','youtube','видео урок','фото','картинки','что такое','wikipedia','вики','своими руками','самостоятельно','в домашних условиях','программа обучения','курсы стать','как стать','торрент','пиратский','халява','бесплатный онлайн','смотреть онлайн','скачать бесплатно','диплом','контрольная','сочинение','презентация скачать','реклама вакансии'];
+const NEG_CAT={
+  medicine:['народные средства','народная медицина','рецепт народный','домашнее лечение','без врача','симптомы','МКБ','диагноз','код по МКБ','лечение травами','гомеопатия','заговор','молитва','признаки болезни','последствия','осложнения','инвалидность','клинические рекомендации','протокол лечения'],
+  beauty:['мастер-класс','урок макияж','самой себе','лайфхак','дома','обучение мастер','курсы маникюра','стать мастером','учиться на','материалы оптом','оборудование для салона','франшиза салона','как открыть салон','вакансия мастер'],
+  pets:['приют','бездомные','волонтёр','благотворительность','усыпить','отравить','бездомные животные','фонд помощи','пристроить','приютить','передержка за еду','бесплатная стерилизация','льгота','вакансия ветеринар'],
+  auto:['своими руками','инструкция','чертёж','схема','замена масла самому','разбор авто','авторазбор','аварийный','угон','ДТП','штраф','протокол','нарушение ПДД','тюнинг сам','перекупщик','авито бу','автоподбор','осмотр перед покупкой'],
+  realty:['авито','циан объявление','без посредников бесплатно','снять комнату','общежитие','хостел','субсидия','военная ипотека','маткапитал','обмен квартир','приватизация','расселение','кадастр','росреестр','оценка квартиры бесплатно','перепланировка согласование'],
+  construction:['своими руками','чертёж','пошаговая инструкция','расчёт онлайн бесплатно','снип','ГОСТ','нормативы','строительные нормы','калькулятор бесплатный','проект дома бесплатно','учебник строительство','обучение строитель','вакансия прораб','работа на стройке','подённая работа'],
+  home:['своими руками','лайфхак','чем заменить','народное средство','бабушкин способ','устройство','принцип работы','инструкция по эксплуатации','ремонт самому','разборка','запчасти для','деталь','схема','мануал','сервисный центр вакансия'],
+  legal:['бесплатная консультация','образец','бланк','шаблон скачать','закон текст','консультант плюс','гарант','судебная практика','решение суда','апелляция','кассация','ГПК','УПК','АПК','статья кодекса','комментарий закона','диссертация','юрфак'],
+  education:['бесплатно','скачать учебник','ответы','ГДЗ','решебник','шпаргалка','списать','контрольная работа','домашнее задание','конспект','лекция скачать','учебник онлайн','олимпиада','ЕГЭ ответы','ОГЭ решения','пробник','демоверсия'],
+  food:['рецепт','приготовить дома','калорийность','состав','БЖУ','диета','похудение','меню на неделю','правильное питание','веган','сыроед','пищевая ценность','КБЖУ','аллерген','глютен'],
+  fitness:['упражнения дома','видео тренировка','бесплатная программа','стероиды','допинг','фармакология спорт','программа тренировок бесплатно','тренажёр своими руками','занятия дома','мотивация','спортивное питание рейтинг','обзор','марафон бесплатный'],
+  kids:['выкройка','сделать своими руками','поделка','мастер-класс','раскраска','распечатать','шаблон','аппликация','рисунок','поделка для детского сада','конкурс детский','олимпиада','портфолио школьника','выпускной сценарий'],
+  eshop:['отзывы','рейтинг','обзор','сравнение','распаковка','unboxing','тест','лучший','топ','рейтинг лучших','aliexpress','алиэкспресс','авито','юла','б/у','вторичный','ремонт','запчасти','разборка'],
+  events:['поздравление текст','сценарий','тост','стихи','открытка','шаблон пригласительного','генератор поздравлений','конкурсы для','игры на праздник','смешные','приколы','мемы','развлечения для детей дома','бесплатный сценарий'],
+  travel:['отзыв','блог','дневник','самостоятельно','дикарём','автостоп','бэкпекер','лоукостер','хитрости','бюджетный','попутчик','каучсёрфинг','фриланс','цифровой кочевник','блог путешественника','влог'],
+  cleaning:['своими руками','средство домашнее','чем отмыть','сода','уксус','лимонная кислота','народные средства','лайфхак','бабушкин способ','чем вывести пятно','удалить запах','плесень самому','чем мыть','дешёвое средство','без химии'],
+  it:['бесплатно создать','конструктор бесплатно','шаблон','open source','github','фриланс','удалёнка вакансия','стажировка','junior','стажёр','обучение программирование бесплатно','курсы IT бесплатно','бесплатный хостинг','тильда бесплатно','wordpress бесплатно'],
+  logistics:['отследить посылку','трек номер','почта','почта россии','CDEK отслеживание','boxberry трекинг','статус заказа','где посылка','задержка доставки','жалоба на доставку','возврат посылки','невручённый','утеря','розыск отправления'],
+  b2b:['чертёж','ГОСТ','ТУ скачать','спецификация','техническое задание шаблон','договор шаблон','КП образец','акт образец','счёт-фактура','1С скачать','тендер','госзакупки','44-ФЗ','223-ФЗ','котировка'],
+  garden:['своими руками','чертёж','пошагово','семена бесплатно','обмен растениями','рассада своими руками','компост','органическое земледелие','пермакультура','лунный календарь','народные приметы','огород без хлопот','ленивый сад','дача бесплатно'],
+  beauty_men:['самому','в домашних условиях','машинка для стрижки','триммер обзор','стрижка самому себе','как стричь бороду','станок для бритья','лайфхак','уход за бородой дома','мужской маникюр дома','крем для лица мужской','рейтинг средств'],
+  handyman:['своими руками','инструкция','видео ремонт','мастер-класс','лайфхак ремонт','устройство','принцип работы','чертёж','схема подключения','электрика своими руками','сантехника самому','замена крана самому','инструмент обзор','рейтинг инструментов'],
+  pharma:['инструкция по применению','аналог','побочные эффекты','противопоказания','отзывы врачей','состав','фармакология','рецепт','дозировка','передозировка','совместимость','взаимодействие','беременность','кормление грудью','детям до года'],
+  remont_tech:['своими руками','разборка','прошивка','драйвер скачать','инструкция','схема','мануал','сервисный центр вакансия','запчасти оптом','дисплей оптом','курсы ремонта','обучение ремонту','тестирование','обзор','сравнение','характеристики','лучший смартфон'],
+  wedding_cat:['своими руками','DIY','шаблон пригласительного','сценарий свадьбы','конкурсы на свадьбу','поздравление текст','тост','стихи','песня','клятва жениха','распечатать','шаблон','генератор','бесплатный макет','фотошоп'],
+  hobby:['своими руками','мастер-класс бесплатно','чертёж','выкройка','схема','инструкция','обзор','рейтинг','тест','сравнение','aliexpress','распаковка','бесплатный урок','видеоурок','канал youtube'],
+  marketplace:['отзывы','жалоба','возврат','рейтинг продавца','обман','мошенники','развод','заблокировали','штраф','комиссия','условия работы','вакансия','работа на складе','сортировщик','упаковщик','самозанятый'],
+  entertainment:['отзыв','обзор','прохождение','гайд','читы','моды','скачать игру','пиратка','взлом','генератор','промокод','купон','бесплатный билет','халява','розыгрыш'],
+  pest:['народные средства','борная кислота','ловушка своими руками','мелок','ультразвук','отпугиватель','средство от тараканов магазин','дихлофос','раптор','рейд','чем травить самому','дезинфекция самостоятельно','озон','кварцевание дома'],
+  hvac:['своими руками','схема подключения','ремонт самому','заправка фреоном сам','утечка фреона','обзор кондиционеров','рейтинг','тест','сравнение','какой выбрать','форум','отзывы покупателей','инструкция','мануал','ошибка кондиционер'],
+  ritual:['приметы','традиции','обычаи','религия','молитва','поминки что готовить','траур','9 дней','40 дней','годовщина смерти','соболезнование текст','венок своими руками','крест на могилу','как ухаживать за могилой'],
+  jewelry:['подделка','как отличить','проба что значит','позолота','бижутерия','фурнитура','handmade','мастер класс','литьё','пайка','припой','плавка','инструмент ювелира','обучение ювелир'],
+  cowork:['бесплатно','для студентов','библиотека','антикафе','тайм-кафе','хостел','общежитие','домашний офис','удалёнка','remote','коливинг','бесплатное рабочее место','волонтёрство'],
+  lab:['расшифровка','норма','что показывает','онлайн расшифровать','калькулятор анализов','референсные значения','таблица нормы','анализ мочи расшифровка','гемоглобин норма','лейкоциты','тромбоциты','СОЭ','что значит повышен'],
+  agro:['своими руками','рецепт','народный','огород','дача','рассада дома','лунный календарь','приметы','органическое','пермакультура','семена бесплатно','обмен','чертёж','самодельный'],
+  telecom:['бесплатный','настройка самому','прошивка','разблокировка','jailbreak','root','обзор','сравнение тарифов','рейтинг','лучший провайдер','форум','отзывы абонентов','жалоба','роспотребнадзор'],
+  beauty_clinic:['в домашних условиях','народные средства','крем от','маска для лица дома','массаж лица самостоятельно','мезороллер дома','пилинг дома','рецепт маски','косметика своими руками','курсы косметолога','обучение инъекции','побочные эффекты','осложнения'],
+  moving:['своими руками','лайфхак','как упаковать','коробки бесплатно','газель без грузчиков','попутный груз','перевозка попутно','авито','юла','доска объявлений','подработка грузчик','вакансия водитель'],
+  franchise:['обман','отзывы негативные','развод','пирамида','MLM','сетевой маркетинг','заработок без вложений','пассивный доход','инфобизнес','курс по бизнесу','гуру','наставничество','менторство','коучинг'],
+  eco:['своими руками','рецепт','DIY','маркировка','сортировка мусора','раздельный сбор','пункт приёма','акция экология','волонтёр','субботник','зелёный блог','обзор','рейтинг','сравнение брендов'],
+  wellness:['бесплатно','видео','youtube','книга скачать','аудиокнига','подкаст','марафон бесплатный','челлендж','мотивация','цитаты','аффирмации','мантры','эзотерика','гадание','гороскоп'],
+  music:['бесплатно','скачать ноты','аккорды','табулатура','минус','караоке','mp3','flac','слушать онлайн','текст песни','перевод песни','история группы','биография','концерт видео','клип'],
+  security:['своими руками','схема','как обойти','взлом','обход сигнализации','отключить камеру','заглушка','глушилка','детектор жучков','шпион','слежка','прослушка','контрразведка','рация частоты'],
+};
+
+// === ОЦЕНКА ЧАСТОТНОСТИ ИЗ ВОРДСТАТ ===
+function estimateVol(cpcMin,cpcMax,comp,keyIdx){
+  const cm={'Низкая':.6,'Средняя':1,'Высокая':1.5,'Очень высокая':2,'Максимальная':2.5};
+  const base=(cpcMin+cpcMax)*140*(cm[comp]||1);
+  const decay=1/(1+keyIdx*0.4);
+  return Math.round(base*decay/100)*100;
+}
+
+// === РАСШИРИТЕЛЬ КЛЮЧЕЙ: из 3-5 базовых → 10 умных вариаций ===
+function expandKeys(baseKeys, nicheName){
+  const result=[...baseKeys];
+  const modifiers=[
+    k=>k+' недорого',
+    k=>k+' рядом',
+    k=>k+' с выездом',
+    k=>k+' акции',
+    k=>k.replace(/цена|стоимость/i,'прайс'),
+    k=>k+' под ключ',
+    k=>k+' отзывы клиентов',
+    k=>'заказать '+k.replace(/купить |заказать |записаться /i,''),
+    k=>'лучший '+k.replace(/купить |заказать |лучший /i,''),
+    k=>k+' гарантия',
+    k=>k+' быстро',
+    k=>k+' в [город]',
+  ];
+  const seen=new Set(baseKeys.map(k=>k.toLowerCase()));
+  let modIdx=0;
+  // пока нет 10 — добавляем вариации
+  while(result.length<10 && modIdx<modifiers.length){
+    for(let i=0;i<baseKeys.length && result.length<10;i++){
+      const nk=modifiers[modIdx](baseKeys[i]);
+      const lk=nk.toLowerCase();
+      if(!seen.has(lk) && nk.length>5){
+        seen.add(lk);
+        result.push(nk);
+      }
+    }
+    modIdx++;
+  }
+  return result.slice(0,10);
+}
+
+// === НИШЕВЫЕ РЕКОМЕНДАЦИИ ===
+const NICHE_TIPS={
+  medicine:[
+    {i:'🏥',t:'Добавьте <strong>расширение «Адрес»</strong> и <strong>«Телефон»</strong> — в медицине 40% конверсий идут через звонки.'},
+    {i:'📋',t:'Разделяйте кампании <strong>по услугам</strong> (терапия, хирургия, диагностика) — разный CPC, разная конверсия.'},
+    {i:'🔬',t:'Настройте <strong>колл-трекинг</strong> — без него невозможно считать реальный CPL в медицине.'},
+    {i:'📱',t:'Мобильный трафик в медицине — 70%+. Убедитесь что сайт <strong>загружается за &lt;3 секунды</strong> на телефоне.'},
+    {i:'⏰',t:'Корректировки ставок: <strong>+30% в будни 9:00–12:00</strong> (утренние записи), <strong>+20% вечер</strong> (после работы).'},
+  ],
+  beauty:[
+    {i:'📸',t:'Добавьте <strong>фото работ «до/после»</strong> в объявления РСЯ — это повышает CTR на 25–40%.'},
+    {i:'🕐',t:'Корректировки: <strong>+30% вечер (18–21)</strong> и <strong>+40% выходные</strong> — пик записей в бьюти.'},
+    {i:'🗺️',t:'Геотаргетинг <strong>до 5 км от салона</strong> — люди не поедут через весь город ради маникюра.'},
+    {i:'📲',t:'Подключите <strong>онлайн-запись</strong> (YCLIENTS, Dikidi) — конверсия в 2 раза выше чем через звонок.'},
+    {i:'🎁',t:'Оффер <strong>«Первый визит −15%»</strong> стабильно даёт лучший CTR в бьюти-нишах.'},
+  ],
+  auto:[
+    {i:'🔧',t:'Разделяйте кампании <strong>по типу услуги</strong>: кузов, подвеска, ДВС, электрика — у каждой свой CPC.'},
+    {i:'📍',t:'Геотаргетинг <strong>до 10 км</strong> — водители готовы ехать дальше, чем пешеходы.'},
+    {i:'⚡',t:'Ключи <strong>«срочно»</strong> и <strong>«сейчас»</strong> дают конверсию в 2–3 раза выше обычных.'},
+    {i:'💬',t:'Укажите <strong>марки авто</strong> в заголовках («Ремонт BMW», «СТО для Toyota») — CTR выше на 20%.'},
+    {i:'🕐',t:'Ставки <strong>+25% в рабочее время</strong> (когда секретарь на месте) для B2B автопарков.'},
+  ],
+  realty:[
+    {i:'📞',t:'<strong>Колл-трекинг обязателен</strong> — 60% лидов в недвижимости приходят через звонки.'},
+    {i:'🔁',t:'Настройте <strong>ретаргетинг на 60–90 дней</strong> — цикл покупки недвижимости долгий.'},
+    {i:'🏗️',t:'Разделяйте <strong>новостройки и вторичку</strong> — совершенно разная аудитория и CPC.'},
+    {i:'💰',t:'Указывайте <strong>цену от</strong> и <strong>ипотечную ставку</strong> в заголовке — снижает нецелевые клики на 30%.'},
+    {i:'🗓️',t:'Ретаргетинг <strong>по дням после визита</strong>: день 1–3 — подробности, день 7–14 — акция, день 30 — напоминание.'},
+  ],
+  legal:[
+    {i:'⚖️',t:'Сужение <strong>по специализации</strong> снижает CPC на 30–50%. Широкие запросы сольют бюджет.'},
+    {i:'🤝',t:'Оффер <strong>«Оплата по результату»</strong> снимает главное возражение — страх потратить деньги зря.'},
+    {i:'📊',t:'<strong>Кейсы с цифрами</strong> ("Списали 2,5 млн долга") конвертируют в 3 раза лучше общих фраз.'},
+    {i:'🌐',t:'Юридические услуги часто ищут <strong>ночью (22–02)</strong> — не отключайте показы в это время.'},
+    {i:'📱',t:'Форма <strong>«Обратный звонок за 30 сек»</strong> конвертирует лучше длинных заявок в юриспруденции.'},
+  ],
+  food:[
+    {i:'🕐',t:'Корректировки: <strong>+50% обеденное время (11–14)</strong> и <strong>+40% вечер (18–21)</strong>.'},
+    {i:'📍',t:'Гео <strong>до 3–5 км</strong> от точки доставки обязателен. Шире — сливаете бюджет.'},
+    {i:'🎁',t:'<strong>«Скидка на первый заказ»</strong> даёт CTR выше на 35% . Укажите конкретную сумму, не процент.'},
+    {i:'📸',t:'Фото блюд в объявлениях РСЯ повышают CTR <strong>на 40–60%</strong> vs. текстовые объявления.'},
+    {i:'📱',t:'<strong>85%+ заказов еды</strong> идут с мобильных. Адаптивный сайт и быстрая форма — must have.'},
+  ],
+  _default:[
+    {i:'🎯',t:'Разделяйте кампании <strong>по теплоте трафика</strong>: горячие ключи (с ценой/заказать) → отдельная кампания.'},
+    {i:'🔄',t:'Тестируйте <strong>минимум 3 варианта объявлений</strong> — Директ автоматически выберет лучший за 1–2 недели.'},
+    {i:'📊',t:'Подключите <strong>Яндекс.Метрику с целями</strong> — без неё невозможно оптимизировать кампанию.'},
+    {i:'🚫',t:'Перед запуском проверьте <strong>минус-слова</strong> в Вордстат — без них до 40% бюджета уходит в мусор.'},
+    {i:'⏰',t:'Первые 2 недели — <strong>не меняйте ставки резко</strong>. Дайте алгоритму Директа собрать статистику.'},
+  ],
+};
+// Алиасы для остальных категорий
+['construction','home','handyman'].forEach(k=>NICHE_TIPS[k]=NICHE_TIPS[k]||NICHE_TIPS._default);
+['fitness','wellness'].forEach(k=>NICHE_TIPS[k]=NICHE_TIPS[k]||NICHE_TIPS._default);
+['education','kids'].forEach(k=>NICHE_TIPS[k]=NICHE_TIPS[k]||NICHE_TIPS._default);
+
+// === ГЕНЕРАТОР ОБЪЯВЛЕНИЙ ===
+// Шаблоны по типу ниши: тексты, офферы, быстрые ссылки — всё зависит от catKey
+const AD_TEMPLATES = {
+  // ---- МЕДИЦИНА ----
+  medicine: {
+    offers:['Запись онлайн за 1 минуту','Принимаем без очереди','Опыт 15+ лет','Гарантия результата'],
+    cta:['Записаться онлайн','Узнать цену','Получить консультацию'],
+    searchDesc:[
+      'Опытные специалисты, современная диагностика. Работаем без выходных. Запишитесь онлайн — ответим в течение 5 минут!',
+      'Принимаем пациентов без очереди. Честные цены, никаких скрытых платежей. Более 3000 довольных пациентов — читайте отзывы.',
+      'Записывайтесь прямо сейчас: онлайн или по телефону. Первичная консультация по сниженной цене для новых пациентов.',
+    ],
+    rsyDesc:[
+      'Не откладывайте здоровье на потом. Запишитесь к специалисту сегодня — приём без очереди, честные цены.',
+      'Тысячи пациентов уже решили свою проблему. Запись онлайн, удобное расписание, результат — гарантирован.',
+    ],
+    sl:[['Цены на услуги','Запись онлайн','Наши врачи','Лицензии'],['Акции месяца','Отзывы пациентов','Как добраться','Контакты']],
+    rsySl:[['Записаться','Прайс-лист','О клинике','Акции'],['Как нас найти','Отзывы','Специалисты','Консультация']],
+  },
+  // ---- КРАСОТА И УХОД ----
+  beauty: {
+    offers:['Запись онлайн 24/7','Акция: 1-й визит −15%','Мастера с сертификатами','Только проверенные материалы'],
+    cta:['Записаться','Узнать цены','Выбрать мастера'],
+    searchDesc:[
+      'Профессиональные мастера с опытом 5+ лет. Запишитесь онлайн прямо сейчас и получите скидку 15% на первый визит!',
+      'Только сертифицированные материалы. Более 2000 довольных клиентов. Удобное расписание: работаем ежедневно с 9 до 21.',
+      'Чистота, комфорт и результат. Гарантируем качество — или вернём деньги. Запись онлайн без звонка.',
+    ],
+    rsyDesc:[
+      'Ухоженный вид без лишних усилий. Опытные мастера, удобное расположение, доступные цены. Записывайтесь!',
+      'Первый визит — всегда со скидкой 15%. Сертифицированные специалисты, только безопасные материалы. Запись прямо сейчас.',
+    ],
+    sl:[['Цены','Запись онлайн','Наши работы','Акции'],['Мастера','Отзывы','Адрес','Контакты']],
+    rsySl:[['Записаться','Примеры работ','Цены','Акции'],['О нас','Отзывы','Контакты','Как найти']],
+  },
+  // ---- ЗООТЕМАТИКА ----
+  pets: {
+    offers:['Бережный уход за питомцами','Опытные ветеринары','Выезд на дом','Работаем без выходных'],
+    cta:['Записать питомца','Вызвать ветеринара','Узнать цены'],
+    searchDesc:[
+      'Заботливые специалисты с опытом 10+ лет. Принимаем без долгого ожидания. Запись онлайн — ответим за 5 минут!',
+      'Безопасно для вашего питомца. Сертифицированные препараты, современное оборудование. Запишитесь или вызовите на дом.',
+      'Здоровье питомца — наш приоритет. Ежедневный приём, выезд на дом. Честные цены без скрытых надбавок.',
+    ],
+    rsyDesc:[
+      'Ваш питомец заслуживает лучшего. Опытные специалисты, безопасные процедуры, удобная запись онлайн.',
+      'Тысячи питомцев уже получили помощь. Приходите сегодня — запись быстрая, цены прозрачные.',
+    ],
+    sl:[['Цены','Запись онлайн','Вызов на дом','Акции'],['О ветеринарах','Отзывы','Адрес','Контакты']],
+    rsySl:[['Записаться','Прайс','Наши специалисты','Отзывы'],['Вызов на дом','Акции','Как найти','Контакты']],
+  },
+  // ---- АВТО ----
+  auto: {
+    offers:['Диагностика от 0 ₽','Гарантия на работы','Запчасти по оптовым ценам','Работаем 7 дней в неделю'],
+    cta:['Записаться на ремонт','Вызвать мастера','Рассчитать стоимость'],
+    searchDesc:[
+      'Запишитесь на сервис прямо сейчас: диагностика бесплатно при заказе ремонта. Опыт 10+ лет, гарантия на все работы.',
+      'Честные цены без накруток. Запчасти по оптовым ценам, чёткие сроки, письменная гарантия. Работаем ежедневно.',
+      'Принимаем без предварительной записи. Ремонт любой сложности: кузов, двигатель, ходовая. Звоните — приедем к вам.',
+    ],
+    rsyDesc:[
+      'Сломалась машина? Не ждите — запишитесь онлайн прямо сейчас. Диагностика бесплатно, цены фиксированные.',
+      'Надёжный автосервис рядом с вами. Гарантия на все виды работ, оригинальные запчасти, честный сервис.',
+    ],
+    sl:[['Цены и прайс','Записаться','Диагностика','Гарантии'],['Отзывы','Наш сервис','Как добраться','Контакты']],
+    rsySl:[['Записаться','Прайс-лист','Наши услуги','Примеры работ'],['Гарантия','Отзывы','Адрес','Контакты']],
+  },
+  // ---- НЕДВИЖИМОСТЬ ----
+  realty: {
+    offers:['Бесплатная консультация','Работаем с ипотекой','Юридическая чистота сделки','Опыт 10+ лет на рынке'],
+    cta:['Получить консультацию','Подобрать объект','Оставить заявку'],
+    searchDesc:[
+      'Подберём объект под ваш бюджет. Работаем со всеми ипотечными программами. Бесплатная консультация — без обязательств!',
+      'Юридически чистые сделки. Опыт 10+ лет на рынке. Более 1500 успешных сделок. Позвоните — ответим на все вопросы.',
+      'Помогаем купить, продать и сдать в аренду. Комиссия только при успешной сделке. Онлайн-показы и выезд на объект.',
+    ],
+    rsyDesc:[
+      'Ищете недвижимость? Мы найдём лучший вариант в вашем районе и бюджете. Консультация — бесплатно.',
+      'Тысячи сделок успешно закрыты. Без лишних комиссий, с юридической гарантией. Оставьте заявку прямо сейчас.',
+    ],
+    sl:[['Подобрать объект','Ипотечный калькулятор','Наши объекты','Контакты'],['Бесплатная консультация','Отзывы','О компании','Как работаем']],
+    rsySl:[['Консультация','Объекты','Ипотека','Отзывы'],['О нас','Как работаем','Юридическая защита','Контакты']],
+  },
+  // ---- СТРОИТЕЛЬСТВО И РЕМОНТ ----
+  construction: {
+    offers:['Смета бесплатно','Фото результатов','Гарантия 2 года','Работаем под ключ'],
+    cta:['Получить смету','Вызвать замерщика','Рассчитать стоимость'],
+    searchDesc:[
+      'Бесплатный выезд замерщика и смета в день обращения. Работаем под ключ, гарантия на все работы 2 года.',
+      'Фото реальных объектов в портфолио. Чёткие сроки, договор на все виды работ. Опыт 8+ лет, 500+ сданных объектов.',
+      'Принимаем объекты любой сложности. Материалы по оптовым ценам. Рассрочка 0%. Запишитесь на бесплатный замер.',
+    ],
+    rsyDesc:[
+      'Планируете ремонт? Закажите бесплатную смету и сравните цены. Работаем под ключ с гарантией 2 года.',
+      'Реальные фото работ, честные расценки, никаких дополнительных платежей. Свяжитесь с нами сегодня.',
+    ],
+    sl:[['Портфолио работ','Бесплатная смета','Прайс-лист','Гарантии'],['Отзывы','Как работаем','Материалы','Контакты']],
+    rsySl:[['Примеры работ','Рассчитать','Портфолио','Отзывы'],['Гарантия','Прайс','О компании','Контакты']],
+  },
+  // ---- ДОМ ----
+  home: {
+    offers:['Выезд мастера бесплатно','Гарантия на работы','Работаем ежедневно','Быстрый выезд за 1 час'],
+    cta:['Вызвать мастера','Рассчитать стоимость','Записаться'],
+    searchDesc:[
+      'Быстрый выезд мастера — в течение 1 часа. Бесплатный выезд при заказе услуги. Работаем ежедневно с 8 до 22.',
+      'Опытные специалисты, гарантия на все работы. Прозрачные цены — платите только за результат.',
+      'Звоните сейчас — мастер приедет сегодня. Все расходные материалы в наличии. Качество гарантировано.',
+    ],
+    rsyDesc:[
+      'Нужна помощь по дому? Опытные мастера выедут сегодня. Честные цены, гарантия на работы.',
+      'Быстро, аккуратно и по фиксированной цене. Работаем ежедневно, без выходных. Вызовите мастера онлайн.',
+    ],
+    sl:[['Вызвать мастера','Прайс-лист','Галерея работ','Гарантии'],['Отзывы','О компании','Акции','Контакты']],
+    rsySl:[['Вызвать','Цены','Примеры','Отзывы'],['Гарантия','Как заказать','Контакты','Акции']],
+  },
+  // ---- ЮРИДИЧЕСКИЕ И ФИНАНСОВЫЕ ----
+  legal: {
+    offers:['Первая консультация бесплатно','Оплата по результату','Опыт 15+ лет','Гарантия конфиденциальности'],
+    cta:['Получить консультацию','Задать вопрос юристу','Записаться на приём'],
+    searchDesc:[
+      'Первая консультация — бесплатно, без обязательств. Опыт 15+ лет, 3000+ выигранных дел. Работаем по всей России.',
+      'Оплата по результату — платите только если выиграли. Полная конфиденциальность. Специализация — ваш тип задач.',
+      'Объясняем сложное простым языком. Реальные сроки и честный прогноз. Запись на консультацию — онлайн или по телефону.',
+    ],
+    rsyDesc:[
+      'Юридическая проблема? Не затягивайте — первая консультация бесплатно. Специалист разберёт вашу ситуацию сегодня.',
+      'Более 3000 успешных дел. Работаем по всей России, онлайн-консультации. Надёжно, конфиденциально, по результату.',
+    ],
+    sl:[['Бесплатная консультация','Наши услуги','Кейсы и победы','Контакты'],['Специализации','Отзывы клиентов','О юристах','Как работаем']],
+    rsySl:[['Консультация','Кейсы','Специализации','Отзывы'],['О нас','Гарантии','Контакты','Цены']],
+  },
+  // ---- ОБРАЗОВАНИЕ ----
+  education: {
+    offers:['Первый урок бесплатно','Сертификат по окончании','Практика с первого занятия','Гарантия результата или возврат'],
+    cta:['Записаться бесплатно','Получить программу','Начать учёбу'],
+    searchDesc:[
+      'Первый урок — бесплатно! Практика с первого занятия, сертификат по окончании. Запишитесь и начните уже сегодня.',
+      'Опытные преподаватели-практики. Гибкий график, обучение онлайн и очно. Результат или вернём деньги.',
+      'Более 5000 выпускников нашли работу после курса. Записывайтесь сейчас — старт группы через 3 дня!',
+    ],
+    rsyDesc:[
+      'Хотите освоить новую профессию? Начните бесплатно — первый урок за 0 ₽. Практика с первого дня.',
+      'Наши выпускники работают в ведущих компаниях. Онлайн-формат, живые занятия, наставничество. Запишитесь!',
+    ],
+    sl:[['Программа курса','Первый урок бесплатно','Преподаватели','Отзывы'],['Сертификаты','Цены','Расписание','Контакты']],
+    rsySl:[['Записаться','Программа','Бесплатный урок','Отзывы'],['Преподаватели','Сертификат','Цены','Контакты']],
+  },
+  // ---- ЕДА ----
+  food: {
+    offers:['Доставка за 45 минут','Первый заказ −15%','Свежие ингредиенты','Работаем ежедневно до 23:00'],
+    cta:['Заказать сейчас','Выбрать меню','Забронировать стол'],
+    searchDesc:[
+      'Доставка за 45 минут или БЕСПЛАТНО. Первый заказ со скидкой 15%. Готовим из свежих ингредиентов каждый день!',
+      'Огромное меню, горячая еда, быстрая доставка. Работаем ежедневно с 10:00 до 23:00. Заказывайте онлайн!',
+      'Бесплатная доставка от 800 ₽. Акции каждый день. Следите за свежим меню — добавляем новинки еженедельно.',
+    ],
+    rsyDesc:[
+      'Проголодались? Закажите прямо сейчас — доставим за 45 минут. Первый заказ со скидкой 15%!',
+      'Свежая еда с доставкой до двери. Огромный выбор, честные цены, акции каждый день. Заказывайте!',
+    ],
+    sl:[['Меню','Акции','Способы оплаты','Контакты'],['Забронировать стол','Отзывы','О нас','Доставка']],
+    rsySl:[['Заказать','Меню','Акции','Доставка'],['Самовывоз','Отзывы','Контакты','О нас']],
+  },
+  // ---- ФИТНЕС ----
+  fitness: {
+    offers:['7 дней бесплатно','Без контрактов','Тренер в подарок','Открыт с 6:00 до 24:00'],
+    cta:['Попробовать бесплатно','Выбрать абонемент','Записаться на пробное'],
+    searchDesc:[
+      'Первые 7 дней БЕСПЛАТНО без обязательств! Современные тренажёры, опытные тренеры, удобный график.',
+      'Присоединяйтесь: более 3000 активных членов клуба. Без скрытых платежей, без обязательных контрактов.',
+      'Тренируйтесь когда удобно: открыты с 6:00 до 24:00. Персональный тренер консультация бесплатно при вступлении.',
+    ],
+    rsyDesc:[
+      'Начните путь к телу мечты сегодня! Первые 7 дней — бесплатно. Тренеры, залы, бассейн — всё включено.',
+      'Более 3000 человек уже тренируются у нас. Без контрактов, без навязывания. Приходите и попробуйте бесплатно.',
+    ],
+    sl:[['Пробное занятие','Абонементы','Расписание','Тренеры'],['Акции месяца','Отзывы','Наш клуб','Контакты']],
+    rsySl:[['Попробовать','Абонементы','Тренеры','Расписание'],['Акции','Отзывы','Фото зала','Контакты']],
+  },
+  // ---- ДЕТСКИЕ ТОВАРЫ ----
+  kids: {
+    offers:['Возврат 30 дней','Безопасные материалы','Сертифицированная продукция','Доставка от 1 дня'],
+    cta:['Перейти в каталог','Выбрать товар','Оформить заказ'],
+    searchDesc:[
+      'Только сертифицированные товары для детей. Безопасные материалы, соответствие ГОСТ. Возврат в течение 30 дней.',
+      'Огромный выбор, доставка от 1 дня, честные цены. Более 10 000 товаров в наличии. Заказывайте прямо сейчас!',
+      'Подберём подходящий вариант по возрасту и бюджету. Бесплатная консультация, подарок при заказе от 2000 ₽.',
+    ],
+    rsyDesc:[
+      'Лучшее — детям! Сертифицированные игрушки и одежда с доставкой за 1 день. Возврат 30 дней, без вопросов.',
+      'Тысячи родителей уже выбрали нас. Безопасно, качественно, с гарантией. Смотрите каталог прямо сейчас.',
+    ],
+    sl:[['Каталог','Безопасность','Доставка и оплата','Акции'],['Отзывы родителей','О магазине','Гарантия и возврат','Контакты']],
+    rsySl:[['Каталог','Акции','Отзывы','Доставка'],['Сертификаты','Возврат','О нас','Контакты']],
+  },
+  // ---- ИНТЕРНЕТ-МАГАЗИНЫ ----
+  eshop: {
+    offers:['Бесплатная доставка от 2000 ₽','Возврат 30 дней','Оплата при получении','Гарантия 12 мес.'],
+    cta:['В каталог','Сравнить цены','Купить со скидкой'],
+    searchDesc:[
+      'Бесплатная доставка от 2000 ₽. Гарантия 12 месяцев на все товары. Оплата при получении — заплатите после проверки.',
+      'Лучшие цены без накруток. Более 50 000 товаров в наличии. Возврат в течение 30 дней без лишних вопросов.',
+      'Купите сегодня — уже завтра у вас. Доставка курьером и в пункты выдачи. Бонусная программа для постоянных покупателей.',
+    ],
+    rsyDesc:[
+      'Нашли дешевле? Снизим цену! Бесплатная доставка, возврат 30 дней, гарантия на каждый товар.',
+      'Огромный выбор, честные цены, быстрая доставка. Более 10 000 довольных покупателей. Смотрите каталог!',
+    ],
+    sl:[['Каталог','Акции','Доставка и оплата','Возврат и гарантия'],['Отзывы','О магазине','Бонусная программа','Контакты']],
+    rsySl:[['Смотреть каталог','Акции','Отзывы','Доставка'],['Гарантия','Возврат','Бонусы','Контакты']],
+  },
+  // ---- МЕРОПРИЯТИЯ ----
+  events: {
+    offers:['Портфолио 500+ мероприятий','Предоплата 20%','Выезд для оценки бесплатно','Работаем по всей России'],
+    cta:['Обсудить мероприятие','Получить смету','Посмотреть портфолио'],
+    searchDesc:[
+      'Организуем мероприятия под ключ. Портфолио 500+ событий. Выезд для осмотра площадки — бесплатно, предоплата 20%.',
+      'Каждое мероприятие — уникально. Честная смета без скрытых платежей. Работаем по договору с гарантиями.',
+      'Оставьте заявку — перезвоним за 15 минут. Разработаем концепцию специально под ваш праздник.',
+    ],
+    rsyDesc:[
+      'Хотите незабываемый праздник? Мы организуем! 500+ мероприятий в портфолио. Смета — бесплатно.',
+      'От идеи до реализации — ведём каждый проект лично. Реальные фото в портфолио. Свяжитесь с нами сегодня.',
+    ],
+    sl:[['Портфолио','Наши услуги','Стоимость','Контакты'],['Отзывы клиентов','Как работаем','Примеры оформления','Связаться']],
+    rsySl:[['Портфолио','Смета','Отзывы','Контакты'],['Примеры','О нас','Цены','Позвонить']],
+  },
+  // ---- ТУРИЗМ ----
+  travel: {
+    offers:['Подбор тура бесплатно','Горящие предложения','+Страховка в подарок','Оплата в рассрочку'],
+    cta:['Подобрать тур','Получить предложение','Забронировать'],
+    searchDesc:[
+      'Подбор тура — бесплатно! Страховка в подарок при бронировании. Более 200 направлений, горящие предложения ежедневно.',
+      'Официальные туроператоры, гарантия возврата. Рассрочка 0%. Опытные менеджеры помогут выбрать лучший вариант.',
+      'Забронируйте тур онлайн или приходите в офис. Документы оформим за 15 минут. Тысячи довольных туристов.',
+    ],
+    rsyDesc:[
+      'Мечтаете об отпуске? Найдём идеальный тур по вашему бюджету. Страховка в подарок, рассрочка 0%.',
+      'Тысячи маршрутов, лучшие цены, надёжные туроператоры. Подберём тур за 30 минут. Оставьте заявку!',
+    ],
+    sl:[['Подобрать тур','Горящие туры','Направления','Визы'],['Страхование','Отзывы туристов','О нас','Контакты']],
+    rsySl:[['Горящие туры','Направления','Консультация','Отзывы'],['Страховка','Рассрочка','О нас','Контакты']],
+  },
+  // ---- КЛИНИНГ ----
+  cleaning: {
+    offers:['Оплата после уборки','Безопасная химия','Выезд в день заказа','Гарантия чистоты'],
+    cta:['Вызвать уборку','Рассчитать стоимость','Заказать онлайн'],
+    searchDesc:[
+      'Оплата только после уборки — результат гарантирован. Безопасная химия, выезд в день заказа.',
+      'Профессиональная уборка любой сложности. Работаем ежедневно. Цена зависит от площади — рассчитайте за 30 секунд.',
+      'Опытные клинеры, проверенные через службу безопасности. Гарантия повторного выезда при претензии.',
+    ],
+    rsyDesc:[
+      'Надоела уборка? Отдайте профессионалам! Оплата после результата, безопасная химия, выезд сегодня.',
+      'Быстро, чисто и без химического запаха. Более 2000 выполненных уборок. Рассчитайте цену за 1 минуту.',
+    ],
+    sl:[['Виды уборки','Цены','Как заказать','Гарантии'],['Отзывы','О нас','Наша химия','Контакты']],
+    rsySl:[['Заказать уборку','Цены','Отзывы','Как работаем'],['Типы уборки','Наша химия','Гарантия','Контакты']],
+  },
+  // ---- IT ----
+  it: {
+    offers:['Аудит сайта бесплатно','Кейсы с реальными цифрами','NDA-договор','Поддержка 24/7'],
+    cta:['Получить аудит','Обсудить проект','Запросить КП'],
+    searchDesc:[
+      'Бесплатный аудит сайта или рекламы до начала сотрудничества. Кейсы с реальными цифрами роста трафика и продаж.',
+      'Прозрачная отчётность, фиксированные сроки, NDA-договор. Специализируемся на B2B и интернет-магазинах.',
+      'Не платите до результата — работаем по KPI. Поддержка 24/7, выделенный менеджер. Запросите КП сегодня.',
+    ],
+    rsyDesc:[
+      'Давно думаете о создании или продвижении сайта? Начните с бесплатного аудита — без обязательств.',
+      'Реальные кейсы, реальные цифры. Запросите КП — сделаем расчёт за 2 часа. Работаем по договору.',
+    ],
+    sl:[['Кейсы и портфолио','Бесплатный аудит','Наши услуги','Стоимость'],['Отзывы клиентов','Команда','Гарантии','Контакты']],
+    rsySl:[['Аудит бесплатно','Кейсы','Услуги','Отзывы'],['Стоимость','Команда','Гарантии','Контакты']],
+  },
+  // ---- ЛОГИСТИКА ----
+  logistics: {
+    offers:['Расчёт за 1 минуту','Работаем 24/7','Страхование груза','Отслеживание онлайн'],
+    cta:['Рассчитать стоимость','Оформить заявку','Позвонить'],
+    searchDesc:[
+      'Рассчитайте стоимость за 1 минуту онлайн. Работаем 24/7, страхование груза в стоимости. Отслеживание онлайн.',
+      'Собственный автопарк, опытные водители, аккуратная погрузка. Гарантируем сохранность — или компенсируем.',
+      'Забираем груз сегодня — доставляем в срок. Фиксированная цена без доплат. Оставьте заявку — перезвоним за 5 мин.',
+    ],
+    rsyDesc:[
+      'Нужна надёжная доставка? Работаем 24/7, страхование груза включено. Рассчитайте стоимость за 1 минуту.',
+      'Собственный автопарк, GPS-отслеживание, аккуратная работа. Закажите доставку прямо сейчас.',
+    ],
+    sl:[['Рассчитать цену','Типы перевозок','Зоны доставки','Отслеживание'],['Отзывы','О компании','Страхование','Контакты']],
+    rsySl:[['Оформить заявку','Рассчитать','Отзывы','Отслеживание'],['Страхование','О нас','Автопарк','Контакты']],
+  },
+  // ---- B2B ----
+  b2b: {
+    offers:['КП за 2 часа','Пробная партия','Сертификаты качества','Доставка по России'],
+    cta:['Запросить КП','Получить образец','Связаться с менеджером'],
+    searchDesc:[
+      'Запросите КП — подготовим расчёт за 2 часа. Пробная партия без предоплаты. Сертификаты качества на все позиции.',
+      'Прямые поставки без посредников. Гибкие условия оплаты, отсрочка платежа до 30 дней. Доставка по всей России.',
+      'Работаем с юр. лицами и ИП. Долгосрочные контракты, персональный менеджер. Оставьте заявку онлайн.',
+    ],
+    rsyDesc:[
+      'Ищете надёжного поставщика? Пробная партия без риска, КП за 2 часа. Оставьте заявку прямо сейчас.',
+      'Прямой производитель, без посредников. Сертификаты, отсрочка платежа, доставка. Свяжитесь с нами.',
+    ],
+    sl:[['Запросить КП','Каталог','Сертификаты','Доставка'],['Об условиях','Отзывы партнёров','О компании','Контакты']],
+    rsySl:[['Запросить КП','Каталог','Условия','Отзывы'],['Сертификаты','Доставка','О нас','Контакты']],
+  },
+  // ---- ДАЧА И САД ----
+  garden: {
+    offers:['Выезд замерщика бесплатно','Фото готовых проектов','Гарантия 3 года','Работаем с апреля по ноябрь'],
+    cta:['Получить смету','Посмотреть проекты','Вызвать замерщика'],
+    searchDesc:[
+      'Бесплатный выезд дизайнера и смета за 1 день. Фото 200+ реализованных проектов. Гарантия на все работы 3 года.',
+      'Реализуем проекты любой сложности — от газона до ландшафтного дизайна под ключ. Работаем с апреля по ноябрь.',
+      'Индивидуальный проект вашего участка. Договор, чёткие сроки, фотооотчёт. Записывайтесь на замер.',
+    ],
+    rsyDesc:[
+      'Хотите красивый участок без лишних усилий? Разработаем проект и реализуем под ключ. Замер — бесплатно.',
+      'Фото 200+ готовых участков в портфолио. Гарантия 3 года. Запишитесь на консультацию прямо сейчас.',
+    ],
+    sl:[['Портфолио проектов','Бесплатная смета','Наши услуги','Гарантия'],['Отзывы','Как работаем','Прайс-лист','Контакты']],
+    rsySl:[['Смотреть проекты','Смета','Прайс','Отзывы'],['Гарантия','О нас','Как заказать','Контакты']],
+  },
+  // ---- БАРБЕРШОП ----
+  beauty_men: {
+    offers:['Онлайн-запись без звонка','Первый визит −10%','Мастера с сертификатами','Ждём вас с 9 до 22'],
+    cta:['Записаться онлайн','Выбрать мастера','Смотреть работы'],
+    searchDesc:[
+      'Запись онлайн — без звонка и очереди. Первый визит со скидкой 10%. Мастера с сертификатами, работаем ежедневно.',
+      'Стрижка любой сложности от опытных барберов. Только качественные инструменты. Удобно, быстро, стильно.',
+      'Смотрите работы мастеров в галерее и выбирайте своего. Онлайн-запись в любое время, напоминание за час.',
+    ],
+    rsyDesc:[
+      'Давно не стриглись? Запишитесь онлайн прямо сейчас — первый визит со скидкой 10%. Без очереди!',
+      'Стиль, который заметят. Опытные барберы, удобный график. Смотрите работы и записывайтесь онлайн.',
+    ],
+    sl:[['Записаться онлайн','Наши мастера','Работы','Цены'],['Акции','Как добраться','Отзывы','Контакты']],
+    rsySl:[['Записаться','Мастера','Работы','Цены'],['Акции','Отзывы','Адрес','Контакты']],
+  },
+  // ---- МАСТЕР НА ЧАС ----
+  handyman: {
+    offers:['Выезд за 1 час','Цена фиксированная','Гарантия на работы','Работаем 7 дней в неделю'],
+    cta:['Вызвать мастера','Узнать цену','Рассчитать стоимость'],
+    searchDesc:[
+      'Мастер приедет за 1 час! Фиксированная цена без скрытых доплат. Гарантия на все виды работ. Работаем ежедневно.',
+      'Список услуг и цен — на сайте. Никаких сюрпризов в счёте. Мастера прошли проверку и обучение.',
+      'Звоните прямо сейчас — мастер уже в пути. Бесплатный выезд при заказе работ от 500 ₽.',
+    ],
+    rsyDesc:[
+      'Нужен мастер? Прямо сейчас! Приедем за 1 час, фиксированная цена, гарантия на работы.',
+      'Доверяйте только проверенным мастерам. Рейтинг, отзывы, гарантия. Вызовите онлайн за 1 минуту.',
+    ],
+    sl:[['Вызвать мастера','Прайс-лист','Виды работ','Гарантия'],['Отзывы','О мастерах','Как заказать','Контакты']],
+    rsySl:[['Вызвать','Прайс','Виды услуг','Отзывы'],['Гарантия','Мастера','Как заказать','Контакты']],
+  },
+  // ---- АПТЕКА ----
+  pharma: {
+    offers:['Доставка за 60 минут','Проверенные препараты','Лицензированная аптека','Скидки по программе лояльности'],
+    cta:['Заказать доставку','Найти препарат','Оформить заказ'],
+    searchDesc:[
+      'Доставка лекарств за 60 минут. Лицензированная аптека, оригинальные препараты. Заказ онлайн круглосуточно.',
+      'Широкий ассортимент: оригиналы и аналоги. Сравните цены прямо на сайте. Доставка или самовывоз из 50+ точек.',
+      'Программа лояльности — копите баллы с каждого заказа. Консультация фармацевта бесплатно при заказе.',
+    ],
+    rsyDesc:[
+      'Нужны лекарства срочно? Доставим за 60 минут. Оригинальные препараты, лицензированная аптека.',
+      'Закажите онлайн — привезём домой или на работу. Широкий выбор, честные цены, программа скидок.',
+    ],
+    sl:[['Каталог товаров','Доставка','Аналоги','Программа скидок'],['Консультация','О нас','Лицензии','Контакты']],
+    rsySl:[['Заказать','Каталог','Аналоги','Доставка'],['Скидки','Консультация','О нас','Контакты']],
+  },
+  // ---- РЕМОНТ ТЕХНИКИ ----
+  remont_tech: {
+    offers:['Диагностика бесплатно','Ремонт при вас за 1 час','Гарантия 90 дней','Работаем без выходных'],
+    cta:['Вызвать мастера','Узнать стоимость ремонта','Сдать в ремонт'],
+    searchDesc:[
+      'Диагностика БЕСПЛАТНО. Ремонт при вас — большинство поломок устраняем за 1 час. Гарантия 90 дней.',
+      'Не включается? Разбился экран? Приносите или вызовите мастера на дом. Честная диагностика, без накруток.',
+      'Работаем без выходных с 9 до 21. Запчасти в наличии на 95% моделей. Цена ремонта — до старта работ.',
+    ],
+    rsyDesc:[
+      'Сломалась техника? Не спешите выбрасывать! Диагностика бесплатно — часто можно починить за час.',
+      'Опытные мастера, оригинальные запчасти, гарантия 90 дней. Вызовите мастера прямо сейчас.',
+    ],
+    sl:[['Цены на ремонт','Диагностика','Вызов мастера','Гарантия'],['Отзывы','Запчасти','Режим работы','Контакты']],
+    rsySl:[['Сдать в ремонт','Диагностика','Цены','Гарантия'],['Отзывы','Запчасти','Вызов','Контакты']],
+  },
+  // ---- СВАДЬБА ----
+  wedding_cat: {
+    offers:['Бесплатная встреча','Портфолио 300+ свадеб','Работаем по договору','Поможем с выбором'],
+    cta:['Обсудить свадьбу','Посмотреть портфолио','Забронировать дату'],
+    searchDesc:[
+      'Бесплатная встреча и обсуждение вашей свадьбы. 300+ реализованных торжеств в портфолио. Работаем по договору.',
+      'Создадим вашу свадьбу мечты в любом стиле и бюджете. Честная смета, никаких сюрпризов. Бронируйте дату!',
+      'Индивидуальный подход к каждой паре. Фотоотчёт предыдущих работ на сайте. Первая встреча — бесплатно.',
+    ],
+    rsyDesc:[
+      'Готовитесь к свадьбе? Мы поможем! 300+ торжеств в портфолио, честные цены, работаем по договору.',
+      'Свадьба мечты — это реально. Смотрите портфолио и бронируйте дату. Первая консультация — бесплатно.',
+    ],
+    sl:[['Портфолио','Наши услуги','Цены','Забронировать'],['Отзывы пар','Как работаем','О нас','Контакты']],
+    rsySl:[['Портфолио','Услуги','Цены','Консультация'],['Отзывы','Забронировать','О нас','Контакты']],
+  },
+  // ---- ВСЕ ОСТАЛЬНЫЕ (универсальный шаблон) ----
+  _default: {
+    offers:['Бесплатная консультация','Гарантия результата','Опыт 5+ лет','Более 1000 довольных клиентов'],
+    cta:['Получить консультацию','Рассчитать стоимость','Оставить заявку'],
+    searchDesc:[
+      'Профессиональный подход и гарантия результата. Бесплатная консультация — расскажем всё без обязательств.',
+      'Более 1000 довольных клиентов. Чёткие сроки, прозрачные цены. Опыт 5+ лет. Запишитесь прямо сейчас.',
+      'Работаем быстро и качественно. Индивидуальный подход к каждому. Позвоните — ответим на все вопросы.',
+    ],
+    rsyDesc:[
+      'Ищете надёжного специалиста? Более 1000 довольных клиентов — читайте отзывы. Консультация бесплатно.',
+      'Только профессионалы, только результат. Честные цены без накруток. Оставьте заявку прямо сейчас.',
+    ],
+    sl:[['Наши услуги','Цены','Примеры работ','Отзывы'],['О компании','Гарантии','Акции','Контакты']],
+    rsySl:[['Узнать цену','Услуги','Примеры','Отзывы'],['Гарантия','Акции','О нас','Контакты']],
+  },
+};
+
+function generateAds(n,catKey){
+  const price=Math.round(n.cpcMin*4);
+  const nm=n.name;
+  const tpl=AD_TEMPLATES[catKey]||AD_TEMPLATES._default;
+
+  // Умная подстановка: добавляем цену и название ниши в заголовки
+  const priceStr='от '+price+' ₽';
+  const ratingStr='★ 4.'+Math.floor(Math.random()*3+7)+' · '+Math.floor(Math.random()*2000+500)+' отзывов';
+
+  return{search:[
+    {
+      t1:nm+' — '+priceStr,
+      t2:'✔ '+tpl.offers[0]+' · '+tpl.offers[1],
+      desc:tpl.searchDesc[0],
+      sl:tpl.sl[0]
+    },
+    {
+      t1:nm+' — '+tpl.cta[1],
+      t2:ratingStr,
+      desc:tpl.searchDesc[1],
+      sl:tpl.sl[1]
+    },
+    {
+      t1:tpl.cta[0]+': '+nm.charAt(0).toLowerCase()+nm.slice(1),
+      t2:'⚡ '+tpl.offers[2]+' · '+tpl.offers[3],
+      desc:tpl.searchDesc[2],
+      sl:tpl.sl[0]
+    },
+  ],rsy:[
+    {
+      t1:'Ищете '+nm.toLowerCase()+'?',
+      t2:tpl.offers[0]+' — убедитесь сами',
+      desc:tpl.rsyDesc[0],
+      sl:tpl.rsySl[0]
+    },
+    {
+      t1:nm+': '+tpl.offers[1].toLowerCase(),
+      t2:tpl.cta[0]+' прямо сейчас',
+      desc:tpl.rsyDesc[1],
+      sl:tpl.rsySl[1]
+    },
+  ]};
+}
+
+// === ГЕНЕРАТОР СТРУКТУРЫ КАМПАНИИ (расширенный) ===
+function generateCampaign(n,catKey,budget,cAvg,rm){
+  const keys=expandKeys(n.keys, n.name);
+  const negBase=NEG_BASE.slice();
+  const negCat=NEG_CAT[catKey]||[];
+  const allNeg=[...new Set([...negBase,...negCat])];
+  const groups=[];
+
+  // Группа 1: Горячие (транзакционные) — с ценой/купить/заказать
+  const hot=keys.filter(k=>/цена|купить|заказать|запись|стоимость|срочно|вызов|забронировать|прайс|под ключ/i.test(k));
+  const warm=keys.filter(k=>!hot.includes(k) && !/недорого|рядом|быстро|акци|гарантия|\[город\]/i.test(k));
+  const geo=keys.filter(k=>/рядом|\[город\]|выезд/i.test(k));
+  const price=keys.filter(k=>/недорого|акци|скидк/i.test(k));
+  const trust=keys.filter(k=>/гарантия|отзывы|лучший/i.test(k));
+
+  if(hot.length) groups.push({
+    name:'🔥 Горячие (транзакционные)',
+    type:'search',
+    desc:'Человек уже готов к покупке. Максимальные ставки, точное соответствие.',
+    keys:hot.map((k,i)=>({kw:k,match:'Фраза',vol:estimateVol(n.cpcMin,n.cpcMax,n.comp,i)}))
+  });
+  if(warm.length) groups.push({
+    name:'🌡️ Тёплые (информационно-коммерческие)',
+    type:'search',
+    desc:'Человек изучает варианты. Средние ставки, ведём на подробную страницу.',
+    keys:warm.map((k,i)=>({kw:k,match:'Фраза',vol:estimateVol(n.cpcMin,n.cpcMax,n.comp,hot.length+i)}))
+  });
+  if(geo.length) groups.push({
+    name:'📍 Гео-запросы (локальный спрос)',
+    type:'search',
+    desc:'Люди ищут рядом с собой. Обязательно настроить геотаргетинг в кампании.',
+    keys:geo.map((k,i)=>({kw:k,match:'Фраза',vol:Math.round(estimateVol(n.cpcMin,n.cpcMax,n.comp,i+3)*0.7)}))
+  });
+  if(price.length) groups.push({
+    name:'💸 Ценовые (бюджетная аудитория)',
+    type:'search',
+    desc:'Ищут дешевле. Нужна отдельная посадочная с акцией/скидкой/рассрочкой.',
+    keys:price.map((k,i)=>({kw:k,match:'Фраза',vol:Math.round(estimateVol(n.cpcMin,n.cpcMax,n.comp,i+4)*0.5)}))
+  });
+  if(trust.length) groups.push({
+    name:'⭐ Репутационные (доверие)',
+    type:'search',
+    desc:'Человек сравнивает. Нужны отзывы, рейтинг, портфолио на посадочной.',
+    keys:trust.map((k,i)=>({kw:k,match:'Фраза',vol:Math.round(estimateVol(n.cpcMin,n.cpcMax,n.comp,i+5)*0.4)}))
+  });
+
+  // РСЯ — 2 группы: охват + ретаргетинг
+  groups.push({
+    name:'📢 РСЯ — новая аудитория',
+    type:'rsy',
+    desc:'Показы на сайтах-партнёрах людям, которые вас ещё не знают. Широкий охват.',
+    keys:keys.slice(0,6).map((k,i)=>({kw:k,match:'Широкая',vol:estimateVol(n.cpcMin,n.cpcMax,n.comp,i)}))
+  });
+  groups.push({
+    name:'🔁 РСЯ — ретаргетинг (возврат)',
+    type:'rsy',
+    desc:'Показы только тем, кто уже был на сайте. Настройте сегмент в Метрике: визит >30 сек, без конверсии.',
+    keys:keys.slice(0,4).map((k,i)=>({kw:k+' (ретаргетинг)',match:'Аудитория',vol:Math.round(estimateVol(n.cpcMin,n.cpcMax,n.comp,i)*0.15)}))
+  });
+
+  return{groups,negatives:allNeg,ads:generateAds(n,catKey)};
+}
 
 const MN=['ЯНВ','ФЕВ','МАР','АПР','МАЙ','ИЮН','ИЮЛ','АВГ','СЕН','ОКТ','НОЯ','ДЕК'];
 
@@ -614,15 +1483,118 @@ function onCat(){
 function onSubniche(){
   const val=document.getElementById('subniche').value;
   const chips=document.getElementById('chips');
-  if(!val){chips.style.display='none';return;}
+  const cbtn=document.getElementById('compare-btn');
+  if(!val){chips.style.display='none';if(cbtn)cbtn.style.display='none';return;}
   const [sk,cat]=val.split('|');
   const n=DB[cat].subs[sk];
   chips.style.display='flex';
+  if(cbtn)cbtn.style.display='block';
   chips.innerHTML=`
     <span class="chip">CPC: ${n.cpcMin}–${n.cpcMax} ₽</span>
     <span class="chip">CTR: ~${(n.ctr*100).toFixed(0)}%</span>
     <span class="chip">Конверсия: ${(n.cr*100).toFixed(1)}%</span>
     <span class="chip">Конкуренция: ${n.comp}</span>`;
+}
+
+// === ТЕМА ===
+function toggleTheme(){
+  const html=document.documentElement;
+  const cur=html.getAttribute('data-theme');
+  const next=cur==='light'?'dark':'light';
+  html.setAttribute('data-theme',next);
+  document.querySelector('.theme-toggle').textContent=next==='light'?'☀️':'🌙';
+  try{localStorage.setItem('mp-theme',next)}catch(e){}
+}
+(function(){try{const t=localStorage.getItem('mp-theme');if(t){document.documentElement.setAttribute('data-theme',t);if(t==='light')document.querySelector('.theme-toggle').textContent='☀️';}}catch(e){}})();
+
+// === СОХРАНЕНИЕ В LOCALSTORAGE ===
+const STATE_KEY='mp-state-v2';
+try{localStorage.removeItem('mp-state')}catch(e){}
+function saveState(){
+  try{
+    const state={
+      cat:document.getElementById('cat').value,
+      sub:document.getElementById('subniche').value,
+      region:document.getElementById('region').value,
+      budget:document.getElementById('bi').value,
+      cr:document.getElementById('cr').value,
+      chk:document.getElementById('chk').value,
+      l2s:document.getElementById('l2s').value,
+      mg:document.getElementById('mg').value,
+      ltv:document.getElementById('ltv-repeat').value,
+    };
+    localStorage.setItem(STATE_KEY,JSON.stringify(state));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STATE_KEY));
+    if(!s)return;
+    if(s.cat){document.getElementById('cat').value=s.cat;onCat();
+      if(s.sub){setTimeout(()=>{document.getElementById('subniche').value=s.sub;onSubniche();},50);}
+    }
+    if(s.region)document.getElementById('region').value=s.region;
+    if(s.budget){document.getElementById('bi').value=s.budget;document.getElementById('slider').value=Math.min(Math.max(+s.budget,5000),500000);onSlider();}
+    if(s.cr)document.getElementById('cr').value=s.cr;
+    if(s.chk)document.getElementById('chk').value=s.chk;
+    if(s.l2s)document.getElementById('l2s').value=s.l2s;
+    if(s.mg)document.getElementById('mg').value=s.mg;
+    if(s.ltv)document.getElementById('ltv-repeat').value=s.ltv;
+  }catch(e){}
+}
+loadState();
+
+// === СРАВНЕНИЕ ПОДНИШ ===
+let compareList=[];
+function addCompare(){
+  const val=document.getElementById('subniche').value;
+  if(!val)return;
+  const [sk,cat]=val.split('|');
+  const n=DB[cat].subs[sk];
+  const rm=+document.getElementById('region').value;
+  if(compareList.some(c=>c.key===sk))return showToast('Ниша уже добавлена');
+  compareList.push({key:sk,cat,name:n.name,n,rm});
+  if(compareList.length>=2)renderCompare();
+  showToast('✓ «'+n.name+'» добавлена для сравнения ('+compareList.length+'/3)');
+  if(compareList.length>=3)document.getElementById('compare-btn').style.display='none';
+}
+function renderCompare(){
+  let old=document.getElementById('compare-card');if(old)old.remove();
+  if(compareList.length<2)return;
+  const budget=Math.max(1000,+document.getElementById('bi').value||30000);
+  const siteCR=(+document.getElementById('cr').value||3)/100;
+  const card=document.createElement('div');card.id='compare-card';card.className='card fu';
+  const rows=compareList.map(c=>{
+    const cAvg=(c.n.cpcMin+c.n.cpcMax)/2*c.rm;
+    const cl=Math.floor(budget/cAvg);
+    const ld=Math.floor(cl*siteCR);
+    const cpl=ld>0?Math.round(budget/ld):0;
+    return{name:c.name,cpc:Math.round(cAvg),ctr:(c.n.ctr*100).toFixed(0),cr:(c.n.cr*100).toFixed(1),clicks:cl,leads:ld,cpl,comp:c.n.comp};
+  });
+  const bestCPL=Math.min(...rows.map(r=>r.cpl||99999));
+  const bestLeads=Math.max(...rows.map(r=>r.leads));
+  let html=`<div class="ct"><div class="ci">⚖️</div>Сравнение ниш <button onclick="compareList=[];document.getElementById('compare-card').remove();document.getElementById('compare-btn').style.display='block'" style="margin-left:auto;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:.15rem .5rem;font-size:.65rem;color:var(--red);cursor:pointer;font-family:inherit">✕ Сбросить</button></div>`;
+  html+=`<div style="overflow-x:auto"><table class="compare-tbl"><thead><tr><th>Метрика</th>`;
+  rows.forEach(r=>{html+=`<th>${r.name}</th>`;});
+  html+=`</tr></thead><tbody>`;
+  const metrics=[
+    ['CPC',rows.map(r=>r.cpc+' ₽')],
+    ['CTR',rows.map(r=>r.ctr+'%')],
+    ['Конверсия',rows.map(r=>r.cr+'%')],
+    ['Кликов/мес',rows.map(r=>r.clicks.toLocaleString('ru'))],
+    ['Лидов/мес',rows.map(r=>`<span class="${r.leads===bestLeads?'best':''}">${r.leads}</span>`)],
+    ['CPL',rows.map(r=>`<span class="${r.cpl===bestCPL?'best':''}">${r.cpl.toLocaleString('ru')} ₽</span>`)],
+    ['Конкуренция',rows.map(r=>r.comp)],
+  ];
+  metrics.forEach(([label,vals])=>{
+    html+=`<tr><td style="color:var(--muted);font-weight:500">${label}</td>`;
+    vals.forEach(v=>{html+=`<td>${v}</td>`;});
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  card.innerHTML=html;
+  const area=document.getElementById('res');
+  area.insertBefore(card,area.firstChild);
 }
 
 // ---- РАСЧЁТ ----
@@ -644,6 +1616,9 @@ function calc(){
   const chk=+document.getElementById('chk').value||0;
   const l2s=(+document.getElementById('l2s').value||20)/100;
   const mp=(+document.getElementById('mg').value||40)/100;
+  const ltvRepeat=Math.max(1,+document.getElementById('ltv-repeat').value||1);
+
+  saveState();
 
   const cMin=n.cpcMin*rm, cMax=n.cpcMax*rm, cAvg=(cMin+cMax)/2;
   const clMin=Math.floor(budget/cMax), clMax=Math.floor(budget/cMin), clAvg=Math.floor(budget/cAvg);
@@ -662,7 +1637,9 @@ function calc(){
     const rev=s*chk, profit=rev*mp;
     const romi=((rev-budget)/budget)*100;
     const roi=((profit-budget)/budget)*100;
-    rD={s,rev,profit,romi,roi};
+    const ltvRev=rev*ltvRepeat, ltvProfit=ltvRev*mp;
+    const ltvRomi=((ltvRev-budget)/budget)*100;
+    rD={s,rev,profit,romi,roi,ltvRepeat,ltvRev,ltvProfit,ltvRomi};
   }
 
   const bArr=[15000,30000,50000,100000,200000];
@@ -672,15 +1649,16 @@ function calc(){
     const ld=Math.floor(cl*siteCR);
     const cpl=ld>0?b/ld:0;
     let romi=null;
-    if(chk>0&&ld>0){const s2=Math.round(ld*l2s);romi=((s2*chk-b)/b)*100;}
+    if(chk>0&&ld>0){const s2=Math.round(ld*l2s);romi=((s2*chk*ltvRepeat-b)/b)*100;}
     return{budget:b,clicks:cl,leads:ld,cpl,romi};
   });
 
   const testB=Math.max(15000,Math.round(cAvg*200/1000)*1000);
   const bFor30=siteCR>0?Math.round((30/siteCR)*cAvg/1000)*1000:0;
 
-  render({n,catName,budget,cMin,cMax,cAvg,clMin,clMax,clAvg,impr,
-    ldMin,ldMax,ldAvg,cplMin,cplMax,cplAvg,sB,rB,siteCR,rD,scen,testB,bFor30});
+  const catKey=cat;
+  render({n,catName,catKey,budget,rm,cMin,cMax,cAvg,clMin,clMax,clAvg,impr,
+    ldMin,ldMax,ldAvg,cplMin,cplMax,cplAvg,sB,rB,siteCR,rD,scen,testB,bFor30,ltvRepeat});
 }
 
 function fmt(n){
@@ -701,16 +1679,219 @@ function kpiBar(label,val,max,color){
   </div>`;
 }
 
+
+function switchTab(btn,tabId){
+  btn.closest('.card').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest('.card').querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  const tab=document.getElementById(tabId);
+  if(tab)tab.classList.add('active');
+}
+
+// --- COPY HELPERS ---
+function showToast(msg){
+  let t=document.getElementById('copy-toast');
+  if(!t){t=document.createElement('div');t.id='copy-toast';t.className='copy-toast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+function copyText(text){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>showToast('✓ Скопировано!')).catch(()=>fallbackCopy(text));
+  }else{fallbackCopy(text);}
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showToast('✓ Скопировано!');}catch(e){showToast('Не удалось скопировать');}
+  document.body.removeChild(ta);
+}
+
+function copyStructure(){
+  if(!window._lastCamp)return;
+  const c=window._lastCamp;
+  let txt='СТРУКТУРА КАМПАНИИ: '+c.nicheName+'\n';
+  txt+='Бюджет: '+c.budget.toLocaleString('ru')+' ₽/мес\n\n';
+  c.groups.forEach(g=>{
+    txt+=g.name+' ('+g.type+')\n';
+    g.keys.forEach(k=>{txt+='  ['+k.match+'] '+k.kw+' — ~'+k.vol.toLocaleString('ru')+'/мес\n';});
+    txt+='\n';
+  });
+  copyText(txt);
+}
+
+function copyAds(){
+  if(!window._lastCamp)return;
+  const c=window._lastCamp;
+  let txt='ОБЪЯВЛЕНИЯ ДЛЯ ДИРЕКТ: '+c.nicheName+'\n\n';
+  txt+='=== ПОИСКОВЫЕ ===\n';
+  c.ads.search.forEach((a,i)=>{
+    txt+='--- Вариант '+(i+1)+' ---\n';
+    txt+='Заголовок 1: '+a.t1+'\n';
+    txt+='Заголовок 2: '+a.t2+'\n';
+    txt+='Текст: '+a.desc+'\n';
+    txt+='Быстрые ссылки: '+a.sl.join(' | ')+'\n\n';
+  });
+  txt+='=== РСЯ ===\n';
+  c.ads.rsy.forEach((a,i)=>{
+    txt+='--- Вариант '+(i+1)+' ---\n';
+    txt+='Заголовок 1: '+a.t1+'\n';
+    txt+='Заголовок 2: '+a.t2+'\n';
+    txt+='Текст: '+a.desc+'\n';
+    txt+='Быстрые ссылки: '+a.sl.join(' | ')+'\n\n';
+  });
+  copyText(txt);
+}
+
+// === ЧЕКЛИСТ ===
+function toggleCheck(el){
+  el.classList.toggle('done');
+  const box=el.querySelector('.chk-box');
+  box.textContent=el.classList.contains('done')?'✓':'';
+  updateCheckProgress();
+}
+function updateCheckProgress(){
+  const total=document.querySelectorAll('.chk-item').length;
+  const done=document.querySelectorAll('.chk-item.done').length;
+  const counter=document.getElementById('chk-counter');
+  if(counter)counter.textContent=done+'/'+total;
+  const fill=document.getElementById('chk-progress-fill');
+  if(fill)fill.style.width=(total?done/total*100:0)+'%';
+  if(done===total&&total>0){
+    if(counter)counter.style.color='var(--green)';
+    showToast('🎉 Все пункты выполнены! Кампания готова к запуску!');
+  }
+}
+
+function copyNegatives(){
+  if(!window._lastCamp)return;
+  copyText(window._lastCamp.negatives.join('\n'));
+}
+
+// --- UTM ---
+function buildUTM(){
+  const url=document.getElementById('utm-url');
+  if(!url)return;
+  const base=url.value.trim();
+  if(!base){const o=document.getElementById('utm-output');if(o)o.style.display='none';return;}
+  const params=[
+    ['utm_source',document.getElementById('utm-source').value.trim()],
+    ['utm_medium',document.getElementById('utm-medium').value.trim()],
+    ['utm_campaign',document.getElementById('utm-campaign').value.trim()],
+    ['utm_content',document.getElementById('utm-content').value.trim()],
+    ['utm_term',document.getElementById('utm-term').value.trim()],
+  ].filter(p=>p[1]).map(p=>encodeURIComponent(p[0])+'='+encodeURIComponent(p[1])).join('&');
+  const full=base+(base.includes('?')?'&':'?')+params;
+  const o=document.getElementById('utm-output');
+  if(o){o.textContent=full;o.style.display='block';}
+}
+function copyUTM(){
+  const o=document.getElementById('utm-output');
+  if(o)copyText(o.textContent);
+}
+
+// --- XLSX EXPORT ---
+function exportXLSX(){
+  if(!window._lastCamp){showToast('Сначала рассчитайте медиаплан');return;}
+  if(typeof XLSX==='undefined'){showToast('Библиотека XLSX не загружена');return;}
+  const c=window._lastCamp;
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: Overview
+  const overview=[
+    ['МЕДИАПЛАН: '+c.nicheName],
+    ['Категория',c.catName],
+    ['Дата',new Date().toLocaleDateString('ru')],
+    [''],
+    ['Бюджет/мес',c.budget],
+    ['Средний CPC',Math.round(c.cAvg)],
+    ['CPC диапазон',Math.round(c.cMin)+' – '+Math.round(c.cMax)],
+    ['Кликов/мес (прогноз)',c.clAvg],
+    ['Лидов/мес (прогноз)',c.ldAvg],
+    ['CPL (прогноз)',Math.round(c.cplAvg)],
+    ['Конверсия сайта',(c.siteCR*100).toFixed(1)+'%'],
+    ['Бюджет Поиск',c.sB],
+    ['Бюджет РСЯ',c.rB],
+  ];
+  if(c.rD){
+    overview.push([''],['Продаж/мес',c.rD.s],['Выручка',c.rD.rev],['ROMI',Math.round(c.rD.romi)+'%']);
+  }
+  const ws1=XLSX.utils.aoa_to_sheet(overview);
+  ws1['!cols']=[{wch:25},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Обзор');
+
+  // Sheet 2: Keywords
+  const kwRows=[['Ключевое слово','Тип соответствия','Группа','Частотность/мес','Тип кампании']];
+  c.groups.forEach(g=>{
+    g.keys.forEach(k=>{
+      kwRows.push([k.kw,k.match,g.name,k.vol,g.type==='rsy'?'РСЯ':'Поиск']);
+    });
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(kwRows);
+  ws2['!cols']=[{wch:40},{wch:15},{wch:35},{wch:15},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Ключевые слова');
+
+  // Sheet 3: Negative keywords
+  const negRows=[['Минус-слово']];
+  c.negatives.forEach(n=>negRows.push([n]));
+  const ws3=XLSX.utils.aoa_to_sheet(negRows);
+  ws3['!cols']=[{wch:35}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Минус-слова');
+
+  // Sheet 4: Ad copies
+  const adRows=[['Тип','Вариант','Заголовок 1','Заголовок 2','Текст объявления','Быстрая ссылка 1','Быстрая ссылка 2','Быстрая ссылка 3','Быстрая ссылка 4']];
+  c.ads.search.forEach((a,i)=>{
+    adRows.push(['Поиск','Вариант '+(i+1),a.t1,a.t2,a.desc,...a.sl]);
+  });
+  c.ads.rsy.forEach((a,i)=>{
+    adRows.push(['РСЯ','Вариант '+(i+1),a.t1,a.t2,a.desc,...a.sl]);
+  });
+  const ws4=XLSX.utils.aoa_to_sheet(adRows);
+  ws4['!cols']=[{wch:8},{wch:12},{wch:35},{wch:35},{wch:60},{wch:18},{wch:18},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Объявления');
+
+  // Sheet 5: Seasonality
+  const seaRows=[['Месяц','Коэффициент спроса','Рекомендуемый бюджет']];
+  const MNF=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  c.n.season.forEach((s,i)=>{
+    seaRows.push([MNF[i],s,Math.round(c.budget*s)]);
+  });
+  const ws5=XLSX.utils.aoa_to_sheet(seaRows);
+  ws5['!cols']=[{wch:12},{wch:20},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws5,'Сезонность');
+
+  XLSX.writeFile(wb,'mediaplan_'+c.catKey+'_'+c.nicheName.replace(/[^a-zA-Zа-яА-Я0-9]/g,'_')+'.xlsx');
+  showToast('✓ XLSX файл скачан!');
+}
+
+function doPrint(){
+  if(typeof window.print==='function'){
+    try{window.print()}catch(e){
+      showPrintTip();
+    }
+  } else { showPrintTip(); }
+}
+function showPrintTip(){
+  const t=document.getElementById('print-tip');
+  if(t){t.style.display='block';setTimeout(()=>t.style.display='none',5000);}
+}
+
 function render(d){
   const ph=document.getElementById('ph');
   if(ph)ph.remove();
   const area=document.getElementById('res');
   area.innerHTML='';
 
-  // 1 — МЕТРИКИ
+  const cm=new Date().getMonth();
+  const nicheTips=NICHE_TIPS[d.catKey]||NICHE_TIPS._default;
+  const seasonNow=d.n.season[cm];
+  let seasonTip='';
+  if(seasonNow>=1) seasonTip=`<div class="rec"><i>🟢</i><span>Сейчас <strong>высокий сезон</strong> для этой ниши — самое время масштабировать бюджет и занимать позиции.</span></div>`;
+  else if(seasonNow>=.85) seasonTip=`<div class="rec"><i>🟡</i><span>Сезон <strong>средний</strong>. Хорошее время для тестов с умеренным бюджетом.</span></div>`;
+  else seasonTip=`<div class="rec"><i>🔴</i><span>Сейчас <strong>спад спроса</strong> (коэф. ${Math.round(seasonNow*100)}%). Снизьте бюджет или переключитесь на РСЯ-ретаргетинг.</span></div>`;
+
   const rExt=d.rD?`
-    <div class="m gn"><span class="mi">📈</span><div class="mv">${Math.round(d.rD.romi)}%</div><div class="ml">ROMI</div>
-      <div class="rb"><div class="rf" id="romi-fill" style="width:0%;background:${d.rD.romi>=100?'#34d399':d.rD.romi>=0?'#fbbf24':'#f87171'}"></div></div></div>
+    <div class="m gn"><span class="mi">📈</span><div class="mv">${Math.round(d.rD.romi)}%</div><div class="ml">ROMI</div><div class="rb"><div class="rf" id="romi-fill" style="width:0%;background:${d.rD.romi>=100?'#34d399':d.rD.romi>=0?'#fbbf24':'#f87171'}"></div></div></div>
     <div class="m"><span class="mi">🛒</span><div class="mv">${d.rD.s}</div><div class="ml">Продаж/мес</div></div>
     <div class="m gn"><span class="mi">💵</span><div class="mv">${fmt(d.rD.rev)}</div><div class="ml">Выручка ₽</div><div class="ms">прибыль ~${fmt(d.rD.profit)} ₽</div></div>`
   :`<div class="m"><span class="mi">📅</span><div class="mv">${fmtM(Math.round(d.budget/30))}</div><div class="ml">Бюджет в день</div></div>`;
@@ -733,23 +1914,14 @@ function render(d){
     area.querySelectorAll('.kpif[data-to]').forEach(el=>setTimeout(()=>{el.style.width=el.dataset.to+'%'},80));
   },130);
 
-  // 2 — БЮДЖЕТ+KPI
   const c2=mk('card fu');
   c2.innerHTML=`
     <div class="ct"><div class="ci">🍩</div>Распределение бюджета</div>
     <div class="bsplit">
       <div class="cw"><canvas id="pieC"></canvas></div>
       <div>
-        <div class="sitem">
-          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem"><div style="width:9px;height:9px;border-radius:3px;background:#6366f1"></div><span style="font-size:.82rem;font-weight:600">Поисковые кампании</span></div>
-          <div style="font-size:1.35rem;font-weight:800;color:var(--primary)">${d.sB.toLocaleString('ru')} ₽</div>
-          <div style="font-size:.68rem;color:var(--muted)">${Math.round(d.n.ss*100)}% · горячий спрос</div>
-        </div>
-        <div class="sitem">
-          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem"><div style="width:9px;height:9px;border-radius:3px;background:#22d3ee"></div><span style="font-size:.82rem;font-weight:600">РСЯ</span></div>
-          <div style="font-size:1.35rem;font-weight:800;color:var(--accent)">${d.rB.toLocaleString('ru')} ₽</div>
-          <div style="font-size:.68rem;color:var(--muted)">${Math.round((1-d.n.ss)*100)}% · охват и ретаргетинг</div>
-        </div>
+        <div class="sitem"><div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem"><div style="width:9px;height:9px;border-radius:3px;background:#6366f1"></div><span style="font-size:.82rem;font-weight:600">Поисковые кампании</span></div><div style="font-size:1.35rem;font-weight:800;color:var(--primary)">${d.sB.toLocaleString('ru')} ₽</div><div style="font-size:.68rem;color:var(--muted)">${Math.round(d.n.ss*100)}% · горячий спрос</div></div>
+        <div class="sitem"><div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem"><div style="width:9px;height:9px;border-radius:3px;background:#22d3ee"></div><span style="font-size:.82rem;font-weight:600">РСЯ</span></div><div style="font-size:1.35rem;font-weight:800;color:var(--accent)">${d.rB.toLocaleString('ru')} ₽</div><div style="font-size:.68rem;color:var(--muted)">${Math.round((1-d.n.ss)*100)}% · охват и ретаргетинг</div></div>
       </div>
     </div>
     <hr style="border:none;border-top:1px solid rgba(255,255,255,.07);margin:1.1rem 0">
@@ -762,25 +1934,18 @@ function render(d){
     </div>`;
   area.appendChild(c2);
   setTimeout(()=>{
-    if(pie)pie.destroy();
-    pie=new Chart(document.getElementById('pieC').getContext('2d'),{
-      type:'doughnut',
-      data:{labels:['Поиск','РСЯ'],datasets:[{data:[d.sB,d.rB],backgroundColor:['#6366f1','#22d3ee'],borderWidth:0,hoverOffset:6}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.toLocaleString('ru')+' ₽'}}},cutout:'70%'}
-    });
+    try{
+      if(pie)pie.destroy();
+      pie=new Chart(document.getElementById('pieC').getContext('2d'),{type:'doughnut',data:{labels:['Поиск','РСЯ'],datasets:[{data:[d.sB,d.rB],backgroundColor:['#6366f1','#22d3ee'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.toLocaleString('ru')+' ₽'}}},cutout:'70%'}});
+    }catch(e){console.warn('Chart.js not loaded:',e);}
   },60);
 
-  // 3 — СЕЗОННОСТЬ
-  const cm=new Date().getMonth();
   const cells=d.n.season.map((v,i)=>{
     const hi=v>=1,mid=v>=.85&&v<1;
     const clr=hi?'#34d399':mid?'#fbbf24':'#f87171';
     const bg=hi?'rgba(52,211,153,.1)':mid?'rgba(251,191,36,.1)':'rgba(248,113,113,.08)';
     const cur=i===cm;
-    return`<div class="sc" style="background:${bg};${cur?'outline:2px solid '+clr+';outline-offset:2px':''}" title="${MN[i]}: ${Math.round(v*100)}%">
-      <span class="sm" style="color:${cur?clr:'rgba(255,255,255,.35)'}">${MN[i]}</span>
-      <div class="sd" style="background:${clr};opacity:${Math.max(.3,v)}"></div>
-    </div>`;
+    return `<div class="sc" style="background:${bg};${cur?'outline:2px solid '+clr+';outline-offset:2px':''}" title="${MN[i]}: ${Math.round(v*100)}%"><span class="sm" style="color:${cur?clr:'rgba(255,255,255,.35)'}">${MN[i]}</span><div class="sd" style="background:${clr};opacity:${Math.max(.3,v)}"></div></div>`;
   }).join('');
   const peaks=d.n.season.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>MN[x.i]).join(', ');
   const lows=d.n.season.map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v).slice(0,2).map(x=>MN[x.i]).join(', ');
@@ -788,83 +1953,87 @@ function render(d){
   c3.innerHTML=`
     <div class="ct"><div class="ci">📅</div>Сезонность спроса</div>
     <div class="sg">${cells}</div>
-    <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.75rem;font-size:.7rem">
-      <div style="display:flex;align-items:center;gap:.3rem"><div style="width:7px;height:7px;border-radius:2px;background:#34d399"></div><span style="color:var(--muted)">Высокий</span></div>
-      <div style="display:flex;align-items:center;gap:.3rem"><div style="width:7px;height:7px;border-radius:2px;background:#fbbf24"></div><span style="color:var(--muted)">Средний</span></div>
-      <div style="display:flex;align-items:center;gap:.3rem"><div style="width:7px;height:7px;border-radius:2px;background:#f87171"></div><span style="color:var(--muted)">Низкий</span></div>
-    </div>
-    <div style="margin-top:.7rem;display:flex;gap:.4rem;flex-wrap:wrap">
-      <span class="badge bg">↑ Пик: ${peaks}</span>
-      <span class="badge br">↓ Спад: ${lows}</span>
-      <span class="badge bb">Сейчас: ${MN[cm]}</span>
-    </div>`;
+    <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.75rem;font-size:.7rem"><div style="display:flex;align-items:center;gap:.3rem"><div style="width:7px;height:7px;border-radius:2px;background:#34d399"></div><span style="color:var(--muted)">Высокий</span></div><div style="display:flex;align-items:center;gap:.3rem"><div style="width:7px;height:7px;border-radius:2px;background:#fbbf24"></div><span style="color:var(--muted)">Средний</span></div><div style="display:flex;align-items:center;gap:.3rem"><div style="width:7px;height:7px;border-radius:2px;background:#f87171"></div><span style="color:var(--muted)">Низкий</span></div></div>
+    <div style="margin-top:.7rem;display:flex;gap:.4rem;flex-wrap:wrap"><span class="badge bg">↑ Пик: ${peaks}</span><span class="badge br">↓ Спад: ${lows}</span><span class="badge bb">Сейчас: ${MN[cm]}</span></div>`;
   area.appendChild(c3);
 
-  // 4 — СЦЕНАРИИ
+  const c3b=mk('card fu');
+  c3b.innerHTML=`<div class="ct"><div class="ci">📈</div>График сезонности (12 месяцев)</div><div style="height:180px"><canvas id="seasonChart"></canvas></div>`;
+  area.appendChild(c3b);
+  try{
+    const sctx=document.getElementById('seasonChart');
+    if(sctx&&typeof Chart!=='undefined'){
+      new Chart(sctx,{type:'line',data:{labels:MN,datasets:[{label:'Спрос %',data:d.n.season.map(v=>Math.round(v*100)),borderColor:'#818cf8',backgroundColor:'rgba(129,140,248,.12)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:d.n.season.map((v,i)=>i===cm?'#22d3ee':v>=1?'#34d399':v>=.85?'#fbbf24':'#f87171'),pointBorderWidth:d.n.season.map((_,i)=>i===cm?3:1),pointBorderColor:d.n.season.map((_,i)=>i===cm?'#22d3ee':'transparent')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},scales:{y:{min:50,max:110,ticks:{callback:v=>v+'%',font:{size:10},color:'#64748b'},grid:{color:'rgba(255,255,255,.06)'}},x:{ticks:{font:{size:10},color:'#64748b'},grid:{display:false}}}}});
+    }
+  }catch(e){}
+
+  const MNF=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  let annualBudget=0,annualClicks=0,annualLeads=0,annualRev=0;
+  const annRows=d.n.season.map((coef,i)=>{
+    const mBudget=Math.round(d.budget*coef);
+    const mClicks=Math.floor(mBudget/d.cAvg);
+    const mLeads=Math.floor(mClicks*d.siteCR);
+    const mRev=d.rD?Math.round(mLeads*(+document.getElementById('l2s').value||20)/100*(+document.getElementById('chk').value||0)*d.rD.ltvRepeat):0;
+    annualBudget+=mBudget;annualClicks+=mClicks;annualLeads+=mLeads;annualRev+=mRev;
+    return `<tr${i===cm?' style="background:rgba(99,102,241,.08)"':''}><td>${MNF[i]}${i===cm?' 📍':''}</td><td>${Math.round(coef*100)}%</td><td>${mBudget.toLocaleString('ru')} ₽</td><td>${mClicks.toLocaleString('ru')}</td><td>${mLeads}</td>${d.rD?`<td>${mRev.toLocaleString('ru')} ₽</td>`:''}</tr>`;
+  }).join('');
+  const c3c=mk('card fu');
+  c3c.innerHTML=`
+    <div class="ct"><div class="ci">📆</div>Годовой прогноз (с учётом сезонности)</div>
+    <div style="overflow-x:auto"><table class="annual-tbl"><thead><tr><th style="text-align:left">Месяц</th><th>Сезон</th><th>Бюджет</th><th>Клики</th><th>Лиды</th>${d.rD?'<th>Выручка</th>':''}</tr></thead><tbody>${annRows}<tr class="total"><td>ИТОГО за год</td><td></td><td>${annualBudget.toLocaleString('ru')} ₽</td><td>${annualClicks.toLocaleString('ru')}</td><td>${annualLeads.toLocaleString('ru')}</td>${d.rD?`<td>${annualRev.toLocaleString('ru')} ₽</td>`:''}</tr></tbody></table></div>
+    <div style="margin-top:.6rem;font-size:.72rem;color:var(--muted);line-height:1.6">💡 <strong>Совет:</strong> В месяцы с коэф. ≥100% увеличивайте бюджет — спрос максимален. В спад (≤70%) сокращайте или переключайтесь на ретаргетинг.</div>`;
+  area.appendChild(c3c);
+
+  // === A/B TEST CALCULATOR ===
+  const _p1ab=d.siteCR,_p2ab=_p1ab*1.15,_pBab=(_p1ab+_p2ab)/2,_dab=_p2ab-_p1ab;
+  const _nPerAb=Math.ceil(7.84*2*_pBab*(1-_pBab)/(_dab*_dab)),_nTotAb=_nPerAb*2;
+  const _bdgAb=Math.round(_nTotAb*d.cAvg),_dayAb=Math.ceil(_nTotAb/(d.clAvg/30));
+  const c3d=mk('card fu');
+  c3d.innerHTML=`<div class="ct"><div class="ci">🧪</div>A/B тест калькулятор <span style="font-size:.63rem;color:var(--dim);font-weight:400;margin-left:.3rem">95% CI · 15% uplift</span></div><div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-bottom:.85rem">Сколько нужно кликов, чтобы результат был <strong style="color:var(--text)">статистически значимым</strong> — обнаружить улучшение конверсии на 15% не случайно.</div><div class="mg" style="grid-template-columns:repeat(3,1fr)"><div class="m ac"><span class="mi">👆</span><div class="mv">${_nTotAb.toLocaleString('ru')}</div><div class="ml">Кликов на тест</div><div class="ms">${_nPerAb.toLocaleString('ru')}/вариант</div></div><div class="m"><span class="mi">📅</span><div class="mv">${_dayAb}</div><div class="ml">Дней теста</div><div class="ms">при ${d.clAvg.toLocaleString('ru')} кл/мес</div></div><div class="m"><span class="mi">💰</span><div class="mv">${fmtM(_bdgAb)}</div><div class="ml">Бюджет теста</div><div class="ms">CPC ~${Math.round(d.cAvg)} ₽</div></div></div><div style="background:rgba(99,102,241,.07);border:1px solid rgba(129,140,248,.15);border-radius:9px;padding:.65rem .9rem;font-size:.72rem;color:var(--muted);line-height:1.6;margin-top:.5rem">💡 <strong style="color:var(--primary)">Порядок A/B тестирования:</strong> Заголовок 1 → Текст объявления → Быстрые ссылки. Меняйте <strong style="color:var(--text)">по одному элементу</strong> — так видно что именно работает. После каждого теста оставляйте победителя и тестируйте следующий.</div>`;
+  area.appendChild(c3d);
+
   const rH=d.rD?'<th>ROMI</th>':'';
   const rows=d.scen.map(s=>{
     const cur=Math.abs(s.budget-d.budget)<5001;
     const rc=d.rD?`<td>${s.romi!=null?`<span class="badge ${s.romi>=100?'bg':s.romi>=0?'by':'br'}">${Math.round(s.romi)}%</span>`:'—'}</td>`:'';
-    return`<tr class="${cur?'cur':''}">
-      <td>${s.budget.toLocaleString('ru')} ₽${cur?' <span class="badge bb">ваш</span>':''}</td>
-      <td>${s.clicks.toLocaleString('ru')}</td><td>${s.leads}</td>
-      <td>${s.cpl>0?Math.round(s.cpl).toLocaleString('ru')+' ₽':'—'}</td>${rc}
-    </tr>`;
+    return `<tr class="${cur?'cur':''}"><td>${s.budget.toLocaleString('ru')} ₽${cur?' <span class="badge bb">ваш</span>':''}</td><td>${s.clicks.toLocaleString('ru')}</td><td>${s.leads}</td><td>${s.cpl>0?Math.round(s.cpl).toLocaleString('ru')+' ₽':'—'}</td>${rc}</tr>`;
   }).join('');
   const c4=mk('card fu');
-  c4.innerHTML=`
-    <div class="ct"><div class="ci">🔢</div>Сценарии по бюджету</div>
-    <div style="overflow-x:auto">
-      <table class="stbl">
-        <thead><tr><th>Бюджет/мес</th><th>Кликов</th><th>Лидов</th><th>CPL</th>${rH}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  c4.innerHTML=`<div class="ct"><div class="ci">🔢</div>Сценарии по бюджету</div><div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Бюджет/мес</th><th>Кликов</th><th>Лидов</th><th>CPL</th>${rH}</tr></thead><tbody>${rows}</tbody></table></div>`;
   area.appendChild(c4);
 
-  // 5 — КЛЮЧЕВЫЕ СЛОВА
-  const kwHtml=d.n.keys.map(k=>`<div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:.4rem .8rem;font-size:.76rem;color:var(--muted)">🔍 ${k}</div>`).join('');
-  const compCls=d.n.comp==='Низкая'?'bg':d.n.comp==='Средняя'?'by':d.n.comp==='Высокая'?'br':'br';
+  const kwHtml=d.n.keys.map(k=>`<div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:.4rem .8rem;font-size:.76rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:.4rem"><span>🔍 ${k}</span><a href="https://wordstat.yandex.ru/#!/?words=${encodeURIComponent(k)}" target="_blank" rel="noopener" style="flex-shrink:0;font-size:.63rem;color:var(--accent);text-decoration:none;border:1px solid rgba(34,211,238,.2);border-radius:5px;padding:.1rem .4rem;white-space:nowrap">→ Wordstat</a></div>`).join('');
+  const compCls=d.n.comp==='Низкая'?'bg':d.n.comp==='Средняя'?'by':'br';
   const c5=mk('card fu');
   c5.innerHTML=`
     <div class="ct"><div class="ci">🔑</div>Ключевые запросы и конкуренция</div>
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-      <div><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">Конкуренция</div><span class="badge ${compCls}" style="font-size:.75rem;padding:.2rem .7rem">${d.n.comp}</span></div>
-      <div><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">CPC в регионе</div><span style="font-size:.88rem;font-weight:700">${Math.round(d.cMin)}–${Math.round(d.cMax)} ₽</span></div>
-      <div><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">Мин. тест</div><span style="font-size:.88rem;font-weight:700">${d.testB.toLocaleString('ru')} ₽/мес</span></div>
-    </div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem"><div><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">Конкуренция</div><span class="badge ${compCls}" style="font-size:.75rem;padding:.2rem .7rem">${d.n.comp}</span></div><div><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">CPC в регионе</div><span style="font-size:.88rem;font-weight:700">${Math.round(d.cMin)}–${Math.round(d.cMax)} ₽</span></div><div><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">Мин. тест</div><span style="font-size:.88rem;font-weight:700">${d.testB.toLocaleString('ru')} ₽/мес</span></div></div>
     <div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Примеры ключевых слов</div>
     <div style="display:flex;flex-direction:column;gap:.32rem">${kwHtml}</div>
-    ${d.bFor30>0?`<div style="margin-top:.9rem;padding:.7rem .95rem;background:rgba(99,102,241,.08);border:1px solid rgba(129,140,248,.2);border-radius:9px;font-size:.78rem;color:var(--muted);line-height:1.6">
-      <strong style="color:var(--primary)">Для 30 лидов/мес</strong> при конверсии ${(d.siteCR*100).toFixed(1)}% → <strong style="color:var(--text)">~${d.bFor30.toLocaleString('ru')} ₽/мес</strong>
-    </div>`:''} `;
+    ${d.bFor30>0?`<div style="margin-top:.9rem;padding:.7rem .95rem;background:rgba(99,102,241,.08);border:1px solid rgba(129,140,248,.2);border-radius:9px;font-size:.78rem;color:var(--muted);line-height:1.6"><strong style="color:var(--primary)">Для 30 лидов/мес</strong> при конверсии ${(d.siteCR*100).toFixed(1)}% → <strong style="color:var(--text)">~${d.bFor30.toLocaleString('ru')} ₽/мес</strong></div>`:''}`;
   area.appendChild(c5);
 
-  // 6 — РЕКОМЕНДАЦИИ
   const c6=mk('card fu');
   c6.innerHTML=`
-    <div class="ct"><div class="ci">💡</div>Рекомендации</div>
+    <div class="ct"><div class="ci">💡</div>Рекомендации для «${d.n.name}»</div>
     <div class="rl2">
-      <div class="rec"><i>🎯</i><span>${d.n.tip}</span></div>
-      <div class="rec"><i>🔬</i><span>Минимальный тестовый бюджет — от <strong>${d.testB.toLocaleString('ru')} ₽/мес</strong>. На меньших суммах статистика ненадёжна.</span></div>
-      <div class="rec"><i>📊</i><span>Поиск (${Math.round(d.n.ss*100)}%) — горячий спрос. РСЯ (${Math.round((1-d.n.ss)*100)}%) — охват и ретаргетинг. Не отключайте РСЯ полностью.</span></div>
-      <div class="rec"><i>⚠️</i><span>Прогноз на основе <strong>средних бенчмарков рынка РФ</strong>. Реальные результаты зависят от сайта и объявлений. Отклонение ±25–35% — норма.</span></div>
-      ${d.rD&&d.rD.romi<0?`<div class="rec"><i>🚨</i><span><strong>ROMI отрицательный</strong> — реклама пока не окупается. Проверьте конверсию сайта, средний чек или минус-слова.</span></div>`:''}
+      <div class="rec" style="background:rgba(99,102,241,.06);border-color:rgba(129,140,248,.2)"><i>🎯</i><span><strong>Совет по нише:</strong> ${d.n.tip}</span></div>
+      ${seasonTip}
+      ${nicheTips.map(t=>`<div class="rec"><i>${t.i}</i><span>${t.t}</span></div>`).join('')}
+      <div class="rec"><i>🔬</i><span>Минимальный тестовый бюджет — от <strong>${d.testB.toLocaleString('ru')} ₽/мес</strong>. На меньших суммах статистика ненадёжна. Рекомендуем тест <strong>2–4 недели</strong>.</span></div>
+      <div class="rec"><i>📊</i><span>Поиск (${Math.round(d.n.ss*100)}%) — горячий спрос, конвертирует сразу. РСЯ (${Math.round((1-d.n.ss)*100)}%) — охват, ретаргетинг, формирование спроса.</span></div>
+      <div class="rec"><i>⚠️</i><span>Прогноз на основе <strong>средних бенчмарков рынка РФ</strong>. Реальные результаты зависят от сайта, объявлений и конкуренции в регионе. Отклонение ±25–35% — норма.</span></div>
+      ${d.rD&&d.rD.romi<0?`<div class="rec" style="background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.2)"><i>🚨</i><span><strong>ROMI отрицательный (${Math.round(d.rD.romi)}%)</strong> — реклама пока не окупается.</span></div>`:''}
+      ${d.rD&&d.rD.romi>=100?`<div class="rec" style="background:rgba(52,211,153,.06);border-color:rgba(52,211,153,.2)"><i>🚀</i><span><strong>ROMI ${Math.round(d.rD.romi)}% — отличный показатель!</strong> Масштабируйте бюджет.</span></div>`:''}
     </div>`;
   area.appendChild(c6);
 
-  // 7 — ОТЧЁТ
-  const today=new Date().toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'});
-  const regText=document.getElementById('region').options[document.getElementById('region').selectedIndex].text;
   const c7=mk('card fu');
   c7.innerHTML=`
     <div class="ct"><div class="ci">📄</div>Готовый отчёт для клиента</div>
     <div class="rbox">
-      <div class="rhdr">
-        <div><div style="font-size:.92rem;font-weight:700">Медиаплан: ${d.n.name}</div><div style="font-size:.7rem;color:var(--muted)">${d.catName} · ${today}</div></div>
-        <span class="badge bb">${d.budget.toLocaleString('ru')} ₽/мес</span>
-      </div>
-      <div class="rrow"><span class="rk">Регион</span><span class="rv">${regText}</span></div>
+      <div class="rhdr"><div><div style="font-size:.92rem;font-weight:700">Медиаплан: ${d.n.name}</div><div style="font-size:.7rem;color:var(--muted)">${d.catName} · ${new Date().toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'})}</div></div><span class="badge bb">${d.budget.toLocaleString('ru')} ₽/мес</span></div>
+      <div class="rrow"><span class="rk">Регион</span><span class="rv">${document.getElementById('region').options[document.getElementById('region').selectedIndex].text}</span></div>
       <div class="rrow"><span class="rk">Тематика</span><span class="rv">${d.n.name}</span></div>
       <div class="rrow"><span class="rk">Прогноз показов/мес</span><span class="rv">${fmt(d.impr)}</span></div>
       <div class="rrow"><span class="rk">Прогноз кликов/мес</span><span class="rv">${d.clMin.toLocaleString('ru')} – ${d.clMax.toLocaleString('ru')}</span></div>
@@ -872,31 +2041,50 @@ function render(d){
       <div class="rrow"><span class="rk">Ожидаемых лидов/мес</span><span class="rv">${d.ldMin} – ${d.ldMax}</span></div>
       <div class="rrow"><span class="rk">Стоимость лида (CPL)</span><span class="rv">~${Math.round(d.cplAvg)} ₽</span></div>
       <div class="rrow"><span class="rk">Поиск / РСЯ</span><span class="rv">${d.sB.toLocaleString('ru')} ₽ / ${d.rB.toLocaleString('ru')} ₽</span></div>
-      ${d.rD?`
-      <div class="rrow"><span class="rk">Прогноз продаж/мес</span><span class="rv">${d.rD.s}</span></div>
-      <div class="rrow"><span class="rk">Прогноз выручки</span><span class="rv">${fmtM(d.rD.rev)}</span></div>
-      <div class="rrow"><span class="rk">ROMI</span><span class="rv">${Math.round(d.rD.romi)}%</span></div>`:''}
+      ${d.rD?`<div class="rrow"><span class="rk">Прогноз продаж/мес</span><span class="rv">${d.rD.s}</span></div><div class="rrow"><span class="rk">Прогноз выручки</span><span class="rv">${fmtM(d.rD.rev)}</span></div><div class="rrow"><span class="rk">ROMI</span><span class="rv">${Math.round(d.rD.romi)}%</span></div>${d.rD.ltvRepeat>1?`<div class="rrow"><span class="rk">LTV-выручка (×${d.rD.ltvRepeat})</span><span class="rv" style="color:var(--green)">${fmtM(d.rD.ltvRev)}</span></div><div class="rrow"><span class="rk">LTV ROMI</span><span class="rv" style="color:var(--green)">${Math.round(d.rD.ltvRomi)}%</span></div>`:''}`:''}
     </div>
     <div style="margin-top:.65rem;font-size:.68rem;color:var(--dim);line-height:1.6">* Данные прогнозные, основаны на средних бенчмарках рынка РФ. Фактические результаты зависят от сайта, объявлений и конкуренции.</div>`;
   area.appendChild(c7);
 
+  const camp=generateCampaign(d.n,d.catKey,d.budget,d.cAvg,d.rm);
+  window._lastCamp={...camp,nicheName:d.n.name,catName:d.catName,catKey:d.catKey,budget:d.budget,cAvg:d.cAvg,cMin:d.cMin,cMax:d.cMax,sB:d.sB,rB:d.rB,ldAvg:d.ldAvg,cplAvg:d.cplAvg,clAvg:d.clAvg,siteCR:d.siteCR,rD:d.rD,n:d.n};
+
+  const c8=mk('card fu no-print');
+  let campHTML=`<div class="ct"><div class="ci">🚀</div>Генератор структуры кампании</div><div class="tab-btns"><button class="tab-btn active" onclick="switchTab(this,'tab-struct')">📋 Структура</button><button class="tab-btn" onclick="switchTab(this,'tab-ads')">📝 Объявления</button><button class="tab-btn" onclick="switchTab(this,'tab-neg')">🚫 Минус-слова</button><button class="tab-btn" onclick="switchTab(this,'tab-utm')">🔗 UTM</button></div>`;
+  campHTML+=`<div class="tab-content active" id="tab-struct">`;
+  camp.groups.forEach(g=>{campHTML+=`<div class="camp-group"><div class="camp-title">${g.name} <span style="font-size:.64rem;color:var(--dim);font-weight:400">(${g.type==='rsy'?'РСЯ':'Поиск'})</span></div>${g.desc?`<div style="font-size:.72rem;color:var(--muted);margin:-0.3rem 0 .5rem;padding:0 .2rem;line-height:1.5">${g.desc}</div>`:''}${g.keys.map(k=>`<div class="camp-kw"><span><span class="match">[${k.match}]</span> ${k.kw}</span><span class="vol">~${k.vol.toLocaleString('ru')}/мес</span></div>`).join('')}</div>`;});
+  campHTML+=`<div class="export-btns"><button class="ebtn green" onclick="exportXLSX()">📊 Скачать XLSX для Директ</button><button class="ebtn" onclick="copyStructure()">📋 Копировать структуру</button></div></div>`;
+  const _adVN=['Цена + оффер','Рейтинг + доверие','CTA + действие'];
+  const _adWY=['Цена в заголовке снижает «инфошум» — покупатели сравнивают цены и охотнее кликают на конкретную сумму.','Рейтинг и отзывы снимают главный страх — «а вдруг подведут?». Работает на осторожных покупателей.','Прямой призыв с конкретной выгодой убеждает колеблющихся сделать первый шаг прямо сейчас.'];
+  campHTML+=`<div class="tab-content" id="tab-ads"><div style="background:rgba(99,102,241,.07);border:1px solid rgba(129,140,248,.2);border-radius:11px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.78rem;line-height:1.7;color:var(--muted)"><div style="font-size:.8rem;font-weight:700;color:var(--primary);margin-bottom:.4rem">💡 Как работают объявления в Яндекс.Директ</div><div>Директ автоматически тестирует варианты и показывает тот, у которого выше CTR. Поэтому <strong style="color:var(--text)">нужно минимум 3 варианта</strong> — система сама выберет лучший за 1–2 недели.</div><div style="margin-top:.4rem">Объявления сгенерированы <strong style="color:var(--text)">специально под нишу «${d.n.name}»</strong> с учётом особенностей аудитории и конкурентных офферов в этой категории.</div></div>${generateAds(d.n,d.catKey).search.map((a,i)=>`<div style="margin-bottom:.85rem"><div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.3rem;flex-wrap:wrap"><span style="background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);border-radius:5px;padding:.1rem .5rem;font-size:.63rem;font-weight:700;color:var(--primary)">Вариант ${i+1} — ${_adVN[i]||'Вариант '+(i+1)}</span></div><div class="ad-preview"><div style="font-size:.6rem;color:var(--dim);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em">Заголовок 1:</div><div class="ad-t1">${a.t1}</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .1rem;text-transform:uppercase;letter-spacing:.04em">Заголовок 2:</div><div class="ad-t2">${a.t2}</div><div class="ad-url">your-site.ru/${d.catKey}/</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .1rem;text-transform:uppercase;letter-spacing:.04em">Текст объявления:</div><div class="ad-desc">${a.desc}</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .2rem;text-transform:uppercase;letter-spacing:.04em">Быстрые ссылки:</div><div class="ad-sl">${a.sl.map(s=>'<a>'+s+'</a>').join('')}</div></div></div><div style="margin-top:.45rem;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.23);border-radius:8px;padding:.45rem .7rem;font-size:.68rem;color:rgba(251,191,36,.9);line-height:1.5"><strong>💡 Почему такой заголовок:</strong> ${_adWY[i]||''}</div></div>`).join('')}<div style="margin-top:1rem;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:.75rem .95rem;font-size:.74rem;line-height:1.75;color:var(--muted)"><div style="font-weight:700;color:#34d399;margin-bottom:.45rem">✅ Что обязательно адаптировать перед запуском:</div><div style="display:flex;flex-direction:column;gap:.25rem"><span>🔗 <strong style="color:var(--text)">Быстрые ссылки</strong> — замените на реальные страницы вашего сайта</span><span>💰 <strong style="color:var(--text)">Цена в Варианте 1</strong> — укажите реальную цену или диапазон вашего предложения</span><span>⭐ <strong style="color:var(--text)">Рейтинг и кол-во отзывов</strong> — обновите актуальные данные из Яндекс.Карт</span><span>🌐 <strong style="color:var(--text)">URL (your-site.ru)</strong> — замените на ваш реальный домен во всех объявлениях</span><span>📞 <strong style="color:var(--text)">Расширения Директ</strong> — добавьте телефон, адрес, уточнения в настройках кампании</span></div></div></div>`;
+  campHTML+=`<div class="tab-content" id="tab-neg"><div style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:.6rem">Минус-слова подобраны под нишу и уже расширены до большого списка.</div><div class="neg-list">${camp.negatives.map(n=>`<span class="neg-chip">${n}</span>`).join('')}</div><div class="export-btns"><button class="ebtn" onclick="copyNegatives()">📋 Копировать минус-слова</button></div></div>`;
+  campHTML+=`<div class="tab-content" id="tab-utm"><div class="utm-box"><div class="utm-row"><label>URL</label><input id="utm-url" type="text" placeholder="https://example.ru"></div><div class="utm-row"><label>source</label><input id="utm-source" type="text" value="yandex" oninput="buildUTM()"></div><div class="utm-row"><label>medium</label><input id="utm-medium" type="text" value="cpc" oninput="buildUTM()"></div><div class="utm-row"><label>campaign</label><input id="utm-campaign" type="text" value="${d.catKey}_${d.n.name}" oninput="buildUTM()"></div><div class="utm-row"><label>content</label><input id="utm-content" type="text" value="ad1" oninput="buildUTM()"></div><div class="utm-row"><label>term</label><input id="utm-term" type="text" value="${d.n.keys[0]||''}" oninput="buildUTM()"></div><div id="utm-output" class="utm-result" style="display:none" onclick="copyUTM()"></div></div></div>`;
+  campHTML+=`</div>`;
+  c8.innerHTML=campHTML;
+  area.appendChild(c8);
+
+  const checkItems=[
+    {g:'Подготовка',items:['Яндекс.Метрика установлена на сайт','Цели в Метрике настроены (заявка, звонок, покупка)','Колл-трекинг подключён (если звонки — основной канал)','Сайт загружается менее 3 сек на мобильных','Посадочная страница соответствует объявлению','Контактные данные и CTA на видном месте']},
+    {g:'Настройка Директа',items:['Аккаунт Яндекс.Директ создан и привязан к Метрике','Кампании разделены: Поиск и РСЯ отдельно','Минус-слова добавлены (базовые + нишевые)','Геотаргетинг настроен (город / радиус)','Расписание показов настроено (рабочие часы)','Корректировки ставок: мобайл, возраст, пол, время']},
+    {g:'Объявления',items:['Минимум 3 варианта объявлений в каждой группе','Заголовки содержат ключевые слова','Быстрые ссылки заполнены (4 штуки)','Расширения: адрес, телефон, уточнения','UTM-метки добавлены ко всем ссылкам']},
+    {g:'После запуска',items:['Проверить позиции через 24 часа','Отключить нерелевантные площадки в РСЯ через 3 дня','Проверить поисковые запросы и дополнить минус-слова через 7 дней','Первая оптимизация ставок через 14 дней','Анализ A/B тестов объявлений через 14-21 день']},
+  ];
+  const c9=mk('card fu no-print');
+  let chkHTML=`<div class="ct"><div class="ci">✅</div>Чеклист запуска кампании <span id="chk-counter" style="margin-left:auto;font-size:.7rem;font-weight:600;color:var(--dim)">0/${checkItems.reduce((a,g)=>a+g.items.length,0)}</span></div><div class="chk-progress"><div class="chk-progress-fill" id="chk-progress-fill" style="width:0%"></div></div>`;
+  let chkIdx=0;
+  checkItems.forEach(group=>{chkHTML+=`<div style="font-size:.7rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.04em;margin:1rem 0 .4rem">${group.g}</div><div class="checklist">`;group.items.forEach(item=>{chkHTML+=`<div class="chk-item" data-chk="${chkIdx}" onclick="toggleCheck(this)"><div class="chk-box"></div><span>${item}</span></div>`;chkIdx++;});chkHTML+=`</div>`;});
+  c9.innerHTML=chkHTML;
+  area.appendChild(c9);
+
   const bw=mk('no-print');
-  bw.innerHTML=`<button class="pbtn" onclick="doPrint()">🖨️ Скачать PDF / Распечатать отчёт для клиента</button>`;
+  bw.innerHTML=`<div class="export-btns" style="margin-top:.3rem"><button class="pbtn" onclick="doPrint()" style="flex:1">🖨️ PDF / Печать отчёта</button><button class="ebtn green" onclick="exportXLSX()" style="flex:1">📊 Скачать XLSX</button></div>`;
   area.appendChild(bw);
 
+  if(compareList.length>=2)renderCompare();
   try{area.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){try{area.scrollIntoView(false)}catch(e2){}}
-}
-function doPrint(){
-  if(typeof window.print==='function'){
-    try{window.print()}catch(e){
-      showPrintTip();
-    }
-  } else { showPrintTip(); }
-}
-function showPrintTip(){
-  const t=document.getElementById('print-tip');
-  if(t){t.style.display='block';setTimeout(()=>t.style.display='none',5000);}
+  setTimeout(buildUTM,100);
 }
 </script>
 </body>
+</html>
 </html>
