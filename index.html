@@ -1931,60 +1931,80 @@ function generateAds(n,catKey){
 
   const kw2=n.keys[1]||kw;
   const kw2Cap=kw2.charAt(0).toUpperCase()+kw2.slice(1);
+  const kw3=n.keys[2]||kw2;
+  const kw4=n.keys[3]||kw3;
+  const nmL=nm.toLowerCase();
+  const tipShort=n.tip?n.tip.split('.')[0]+'.':'';
+
+  // Генерация уникальных описаний для КАЖДОЙ подниши
+  const uDesc=[
+    nmL.charAt(0).toUpperCase()+nmL.slice(1)+' '+priceStr+'. '+tpl.offers[0]+', '+tpl.offers[1].toLowerCase()+'. Запишитесь — ответим за 5 минут!',
+    revCount+'+ клиентов уже выбрали нас для «'+nmL+'». '+tpl.offers[2]+'. Чёткие сроки, прозрачные цены.',
+    tpl.cta[0]+' на «'+nmL+'» прямо сейчас. '+tpl.offers[3]+'. Работаем ежедневно, без скрытых платежей.',
+    'Специализируемся на «'+nmL+'». '+tipShort+' Опыт 5+ лет, гарантия на услуги. '+tpl.cta[1]+'!',
+    kw2Cap+', '+kw3+', '+kw4+' — всё в одном месте. '+tpl.offers[0]+'. Оставьте заявку — перезвоним в течение 5 минут.',
+    'Почему нас выбирают для «'+nmL+'»: '+tpl.offers[2].toLowerCase()+', '+tpl.offers[3].toLowerCase()+'. Читайте '+revCount+'+ отзывов!',
+  ];
+  const uRsy=[
+    'Ищете «'+nmL+'»? '+tpl.offers[0]+', '+tpl.offers[1].toLowerCase()+'. Более '+revCount+' отзывов. Оставьте заявку!',
+    nm+' — '+tpl.offers[2].toLowerCase()+', '+tpl.offers[3].toLowerCase()+'. '+tpl.cta[0]+' — акция до конца '+mo+'!',
+    'Надоело переплачивать за «'+nmL+'»? Честная цена '+priceStr+'. '+tpl.cta[0]+' без обязательств!',
+  ];
+
   return{search:[
     {
       t1:kwCap+' — '+priceStr+' ['+mo+' '+yr+']',
       t2:'✔ '+tpl.offers[0]+' · '+tpl.offers[1],
-      desc:tpl.searchDesc[0]+' {Keyword:'+nm+'}. Акция до конца месяца!',
+      desc:uDesc[0]+' {Keyword:'+nm+'}. Акция до конца месяца!',
       sl:tpl.sl[0]
     },
     {
       t1:nm+' ★ '+ratingNum+' — '+revCount+' отзывов',
       t2:'✔ '+tpl.offers[2]+' · '+tpl.cta[1],
-      desc:tpl.searchDesc[1]+' Проверено клиентами — рейтинг '+ratingNum+' на Яндекс.Картах.',
+      desc:uDesc[1]+' Проверено клиентами — рейтинг '+ratingNum+' на Яндекс.Картах.',
       sl:tpl.sl[1]
     },
     {
       t1:tpl.cta[0]+' — '+nm+' ↗',
       t2:'⚡ '+tpl.offers[2]+' · '+tpl.offers[3],
-      desc:tpl.searchDesc[2]+' Ответим за 5 минут. Работаем ежедневно.',
+      desc:uDesc[2]+' Ответим за 5 минут. Работаем ежедневно.',
       sl:tpl.sl[0]
     },
     {
       t1:kw2Cap+' — Скидка '+Math.floor(Math.random()*10+10)+'% в '+mo,
       t2:'⏳ Осталось '+Math.floor(Math.random()*8+3)+' мест · Успейте записаться',
-      desc:'Специальное предложение на {Keyword:'+nm+'} до конца месяца. Гарантия качества. Работаем с '+yr.toString().slice(-2)+' года.',
+      desc:uDesc[3]+' Специальное предложение до конца месяца. Работаем с '+yr.toString().slice(-2)+' года.',
       sl:tpl.sl[1]
     },
     {
       t1:nm+' в [городе] — от '+price.toLocaleString('ru')+' ₽',
       t2:'📍 '+tpl.offers[0]+' · Рядом с вами',
-      desc:'Удобное расположение. '+tpl.searchDesc[0]+' Запись за 2 минуты, без очереди. Звоните!',
+      desc:uDesc[4]+' Запись за 2 минуты, без очереди. Звоните!',
       sl:tpl.sl[0]
     },
     {
-      t1:'Сравните цены на '+nm.toLowerCase(),
+      t1:'Сравните цены на '+nmL,
       t2:'💡 '+tpl.cta[0]+' · Бесплатная консультация',
-      desc:'Почему выбирают нас: '+tpl.offers[2].toLowerCase()+', '+tpl.offers[3].toLowerCase()+'. {Keyword:'+nm+'}. Оставьте заявку!',
+      desc:uDesc[5]+' {Keyword:'+nm+'}. Оставьте заявку!',
       sl:tpl.sl[1]
     },
   ],rsy:[
     {
-      t1:'Ищете: '+nm.toLowerCase()+'?',
+      t1:'Ищете: '+nmL+'?',
       t2:priceStr+' · '+tpl.offers[0],
-      desc:tpl.rsyDesc[0]+' Более '+revCount+' отзывов. Оставьте заявку!',
+      desc:uRsy[0],
       sl:tpl.rsySl[0]
     },
     {
       t1:nm+' — '+tpl.offers[1].toLowerCase(),
       t2:tpl.cta[0]+' · акция '+mo+' '+yr,
-      desc:tpl.rsyDesc[1]+' {Keyword:'+nm+'}.',
+      desc:uRsy[1],
       sl:tpl.rsySl[1]
     },
     {
-      t1:'Надоело переплачивать за '+nm.toLowerCase()+'?',
+      t1:'Надоело переплачивать за '+nmL+'?',
       t2:'✅ Честная цена · '+revCount+'+ клиентов',
-      desc:'Узнайте реальную цену на '+nm.toLowerCase()+'. Без скрытых платежей, без навязанных услуг. '+tpl.cta[0]+' прямо сейчас!',
+      desc:uRsy[2],
       sl:tpl.rsySl[0]
     },
   ]};
