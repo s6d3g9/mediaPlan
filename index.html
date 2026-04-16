@@ -1922,78 +1922,72 @@ function generateAds(n,catKey){
   const nmL=nm.toLowerCase();
   const tpl=AD_TEMPLATES[catKey]||AD_TEMPLATES._default;
   const priceStr='от '+price.toLocaleString('ru')+' ₽';
-  const mNames=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-  const mo=mNames[new Date().getMonth()];
-  const yr=new Date().getFullYear();
   const ratingNum='4.'+Math.floor(Math.random()*2+8);
   const revCount=Math.floor(Math.random()*2000+800);
   const kw1=(n.keys[0]||nm).replace(/\[город\]/g,'').trim();
   const kw2=(n.keys[1]||kw1).replace(/\[город\]/g,'').trim();
   const cap=s=>(s||'').charAt(0).toUpperCase()+(s||'').slice(1);
-  const tipFirst=(n.tip||'').split(/\.\s*/)[0];
   const disc=Math.floor(Math.random()*10+10);
+  const o=tpl.offers, c=tpl.cta;
+  // Обрезка до лимита символов Директа (по последнему пробелу)
+  const tr=(s,mx)=>{s=s.replace(/\s+/g,' ').trim();if(s.length<=mx)return s;let t=s.slice(0,mx);const li=t.lastIndexOf(' ');return(li>mx*0.5?t.slice(0,li):t).trim();};
 
-  /* === ПОИСК: 5 вариантов ===
-     Вариант 1 — Цена + оффер (привлечь внимание ценой)
-     Вариант 2 — Соцдоказательство (рейтинг и отзывы)
-     Вариант 3 — CTA + выгода (призыв к действию)
-     Вариант 4 — Акция / скидка (ограниченное предложение)
-     Вариант 5 — Гео (локальная привязка)
-  */
+  /* AIDA: Ключ + акция/выгода/боль
+     Лимиты Директ: t1 ≤ 52 симв, t2 ≤ 30 симв, desc ≤ 81 симв */
 
   return{search:[
-    // Вариант 1: Цена + оффер
+    // 1 — Ключ + цена (A: цена-крючок → I: оффер → D+A: заявка)
     {
-      t1:cap(kw1)+' — '+priceStr+' ['+mo+' '+yr+']',
-      t2:'✔ '+tpl.offers[0]+' · '+tpl.offers[1],
-      desc:cap(nmL)+' '+priceStr+'. '+tpl.offers[0]+', '+tpl.offers[1].toLowerCase()+'. Работаем без выходных — оставьте заявку и мы ответим в течение 5 минут!',
+      t1:tr(cap(kw1)+' — '+priceStr,52),
+      t2:tr(o[0],30),
+      desc:tr(cap(nmL)+' '+priceStr+'. '+o[0]+'. Заявка онлайн!',81),
       sl:tpl.sl[0]
     },
-    // Вариант 2: Соцдоказательство
+    // 2 — Ключ + доверие (A: рейтинг → I: отзывы → D+A: проверьте)
     {
-      t1:nm+' ★ '+ratingNum+' — '+revCount+' отзывов',
-      t2:'⭐ '+tpl.offers[2]+' · Рейтинг '+ratingNum,
-      desc:'«'+nm+'» — '+revCount+'+ довольных клиентов. '+tpl.offers[2]+'. Прозрачные цены, проверенное качество. Рейтинг '+ratingNum+' на Яндекс.Картах.',
+      t1:tr(cap(kw1)+' ★'+ratingNum+' · '+revCount+' отзывов',52),
+      t2:tr(o[2],30),
+      desc:tr(revCount+'+ клиентов выбрали нас. '+o[2]+'. Проверьте!',81),
       sl:tpl.sl[1]
     },
-    // Вариант 3: CTA + выгода
+    // 3 — Ключ + выгода (A: УТП → I: оффер → D+A: CTA)
     {
-      t1:cap(tpl.cta[0])+' — '+nm+' ↗',
-      t2:'⚡ '+tpl.offers[2]+' · '+tpl.offers[3],
-      desc:cap(tpl.cta[0])+' — «'+nmL+'». '+tpl.offers[3]+'. Выгодные условия, широкий выбор. Ответим на все вопросы в течение 5 минут.',
+      t1:tr(cap(kw1)+' · '+o[1].toLowerCase(),52),
+      t2:tr(cap(c[0]),30),
+      desc:tr(o[3]+'. Выгодные условия. '+cap(c[0])+' сейчас!',81),
       sl:tpl.sl[0]
     },
-    // Вариант 4: Акция / скидка
+    // 4 — Ключ + скидка (A: скидка → I: оффер → D+A: успейте)
     {
-      t1:cap(kw2)+' — скидка '+disc+'% в '+mo,
-      t2:'🔥 Акция '+mo+' · '+tpl.cta[0],
-      desc:'Акция: −'+disc+'% на «'+nmL+'» до конца месяца. '+tipFirst+'. Выгодные условия для новых клиентов. '+cap(tpl.cta[1])+'!',
+      t1:tr(cap(kw2)+' со скидкой '+disc+'%',52),
+      t2:tr('Успейте · '+c[0],30),
+      desc:tr('Скидка '+disc+'% на «'+nmL+'». '+o[0]+'. '+cap(c[1])+'!',81),
       sl:tpl.sl[1]
     },
-    // Вариант 5: Гео
+    // 5 — Ключ + гео (A: рядом → I: цена → D+A: на сайте)
     {
-      t1:nm+' в [городе] — '+priceStr,
-      t2:'📍 Рядом с вами · '+tpl.offers[0],
-      desc:'«'+nm+'» в вашем городе '+priceStr+'. Удобное расположение, '+tpl.offers[0].toLowerCase()+'. Смотрите каталог и условия на сайте!',
+      t1:tr(cap(kw1)+' в [городе] '+priceStr,52),
+      t2:tr('Рядом · '+o[0],30),
+      desc:tr(cap(nmL)+' рядом с вами. '+o[0]+'. Подробнее на сайте!',81),
       sl:tpl.sl[0]
     },
   ],rsy:[
     {
-      t1:'Ищете: '+nmL+'?',
-      t2:priceStr+' · '+tpl.offers[0],
-      desc:'Ищете «'+nmL+'»? '+tpl.offers[0]+', '+tpl.offers[1].toLowerCase()+'. '+revCount+'+ довольных клиентов. Оставьте заявку!',
+      t1:tr('Ищете '+nmL+'?',52),
+      t2:tr(priceStr+' · '+o[0],30),
+      desc:tr(o[0]+', '+o[1].toLowerCase()+'. '+revCount+'+ клиентов!',81),
       sl:tpl.rsySl[0]
     },
     {
-      t1:nm+' — '+tpl.offers[1].toLowerCase(),
-      t2:cap(tpl.cta[0])+' · акция '+mo+' '+yr,
-      desc:'«'+nm+'» — '+tpl.offers[2].toLowerCase()+', '+tpl.offers[3].toLowerCase()+'. '+cap(tpl.cta[0])+' со скидкой '+disc+'% до конца '+mo+'!',
+      t1:tr(nm+' · '+o[1].toLowerCase(),52),
+      t2:tr(cap(c[0])+' со скидкой',30),
+      desc:tr('−'+disc+'% на «'+nmL+'». '+o[2]+'. '+cap(c[0])+'!',81),
       sl:tpl.rsySl[1]
     },
     {
-      t1:'Надоело переплачивать за '+nmL+'?',
-      t2:'✅ Честная цена · '+revCount+'+ клиентов',
-      desc:'Надоело переплачивать за «'+nmL+'»? Честная цена '+priceStr+'. '+cap(tpl.cta[0])+' — без лишних наценок и обязательств!',
+      t1:tr('Устали переплачивать за '+nmL+'?',52),
+      t2:tr('Честная цена · выгодно',30),
+      desc:tr('Честная цена '+priceStr+'. '+cap(c[0])+' без переплат!',81),
       sl:tpl.rsySl[0]
     },
   ]};
@@ -2819,8 +2813,8 @@ function render(d){
   campHTML+=`<div class="tab-content active" id="tab-struct">`;
   camp.groups.forEach(g=>{campHTML+=`<div class="camp-group"><div class="camp-title">${g.name} <span style="font-size:.64rem;color:var(--dim);font-weight:400">(${g.type==='rsy'?'РСЯ':'Поиск'})</span></div>${g.desc?`<div style="font-size:.72rem;color:var(--muted);margin:-0.3rem 0 .5rem;padding:0 .2rem;line-height:1.5">${g.desc}</div>`:''}${g.keys.map(k=>`<div class="camp-kw"><span><span class="match">[${k.match}]</span> <a href="https://wordstat.yandex.ru/?words=${encodeURIComponent(k.kw)}" target="_blank" class="ws-link" title="Проверить в Wordstat">${k.kw}</a></span><span class="vol">~${k.vol.toLocaleString('ru')}/мес</span></div>`).join('')}</div>`;});
   campHTML+=`<div class="export-btns"><button class="ebtn" onclick="copyStructure()">📋 Копировать структуру</button></div></div>`;
-  const _adVN=['Цена + оффер','Рейтинг + доверие','CTA + выгода','Скидка + акция','Гео + удобство'];
-  const _adWY=['Цена в заголовке снижает «инфошум» — покупатели сравнивают цены и охотнее кликают на конкретную сумму.','Рейтинг и отзывы снимают главный страх — «а вдруг подведут?». Работает на осторожных покупателей.','Прямой призыв с конкретной выгодой убеждает колеблющихся сделать первый шаг прямо сейчас.','Скидка + ограниченное время создают срочность. FOMO (страх упустить) повышает CTR на 15-25%.','Гео-привязка «в [городе]» + «рядом» привлекает локальных клиентов. Конверсия выше на 30% vs. обычных.'];
+  const _adVN=['Ключ + цена','Ключ + доверие','Ключ + выгода','Ключ + скидка','Ключ + гео'];
+  const _adWY=['AIDA: ключевой запрос + цена в заголовке привлекает внимание, оффер вызывает интерес, заявка — действие.','AIDA: ключ + рейтинг снимает страх «а вдруг подведут». Отзывы усиливают интерес и желание.','AIDA: ключ + УТП в заголовке вызывает интерес, CTA подталкивает к действию.','AIDA: ключ + скидка создаёт срочность (FOMO). Повышает CTR на 15-25%.','AIDA: ключ + гео привлекает локальных клиентов, конверсия +30% вс. обычных объявлений.'];
   campHTML+=`<div class="tab-content" id="tab-ads"><div style="background:rgba(99,102,241,.07);border:1px solid rgba(129,140,248,.2);border-radius:11px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.78rem;line-height:1.7;color:var(--muted)"><div style="font-size:.8rem;font-weight:700;color:var(--primary);margin-bottom:.4rem">💡 Как работают объявления в Яндекс.Директ</div><div>Директ автоматически тестирует варианты и показывает тот, у которого выше CTR. Поэтому <strong style="color:var(--text)">нужно минимум 3 варианта</strong> — система сама выберет лучший за 1–2 недели.</div><div style="margin-top:.4rem">Объявления сгенерированы <strong style="color:var(--text)">специально под нишу «${d.n.name}»</strong> с учётом особенностей аудитории и конкурентных офферов в этой категории.</div></div>${generateAds(d.n,d.catKey).search.map((a,i)=>`<div style="margin-bottom:.85rem"><div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.3rem;flex-wrap:wrap"><span style="background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);border-radius:5px;padding:.1rem .5rem;font-size:.63rem;font-weight:700;color:var(--primary)">Вариант ${i+1} — ${_adVN[i]||'Вариант '+(i+1)}</span></div><div class="ad-preview"><div style="font-size:.6rem;color:var(--dim);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em">Заголовок 1:</div><div class="ad-t1">${a.t1}</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .1rem;text-transform:uppercase;letter-spacing:.04em">Заголовок 2:</div><div class="ad-t2">${a.t2}</div><div class="ad-url">your-site.ru/${d.catKey}/</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .1rem;text-transform:uppercase;letter-spacing:.04em">Текст объявления:</div><div class="ad-desc">${a.desc}</div><div style="font-size:.6rem;color:var(--dim);margin:.3rem 0 .2rem;text-transform:uppercase;letter-spacing:.04em">Быстрые ссылки:</div><div class="ad-sl">${a.sl.map(s=>'<a>'+s+'</a>').join('')}</div></div></div><div style="margin-top:.45rem;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.23);border-radius:8px;padding:.45rem .7rem;font-size:.68rem;color:rgba(251,191,36,.9);line-height:1.5"><strong>💡 Почему такой заголовок:</strong> ${_adWY[i]||''}</div>`).join('')}<div style="margin-top:1rem;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:.75rem .95rem;font-size:.74rem;line-height:1.75;color:var(--muted)"><div style="font-weight:700;color:#34d399;margin-bottom:.45rem">✅ Что обязательно адаптировать перед запуском:</div><div style="display:flex;flex-direction:column;gap:.25rem"><span>🔗 <strong style="color:var(--text)">Быстрые ссылки</strong> — замените на реальные страницы вашего сайта</span><span>💰 <strong style="color:var(--text)">Цена в Варианте 1</strong> — укажите реальную цену или диапазон вашего предложения</span><span>⭐ <strong style="color:var(--text)">Рейтинг и кол-во отзывов</strong> — обновите актуальные данные из Яндекс.Карт</span><span>🌐 <strong style="color:var(--text)">URL (your-site.ru)</strong> — замените на ваш реальный домен во всех объявлениях</span><span>📞 <strong style="color:var(--text)">Расширения Директ</strong> — добавьте телефон, адрес, уточнения в настройках кампании</span></div></div></div>`;
   campHTML+=`<div class="tab-content" id="tab-neg"><div style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:.6rem">Минус-слова подобраны под нишу и уже расширены до большого списка.</div><div class="neg-list">${camp.negatives.map(n=>`<span class="neg-chip">${n}</span>`).join('')}</div><div class="export-btns"><button class="ebtn" onclick="copyNegatives()">📋 Копировать минус-слова</button></div></div>`;
   campHTML+=`<div class="tab-content" id="tab-utm"><div class="utm-box"><div class="utm-row"><label>URL</label><input id="utm-url" type="text" placeholder="https://example.ru"></div><div class="utm-row"><label>Источник (source)</label><input id="utm-source" type="text" value="yandex" oninput="buildUTM()"></div><div class="utm-row"><label>Канал (medium)</label><input id="utm-medium" type="text" value="cpc" oninput="buildUTM()"></div><div class="utm-row"><label>Кампания (campaign)</label><input id="utm-campaign" type="text" value="${d.catKey}_${d.n.name.replace(/[а-яёА-ЯЁ]/g,c=>{const t={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};return t[c.toLowerCase()]||c}).replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}" oninput="buildUTM()"></div><div class="utm-row"><label>Контент (content)</label><input id="utm-content" type="text" value="ad1" oninput="buildUTM()"></div><div class="utm-row"><label>Ключевое слово (term)</label><input id="utm-term" type="text" value="${(d.n.keys[0]||'').replace(/[а-яёА-ЯЁ]/g,c=>{const t={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};return t[c.toLowerCase()]||c}).replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}" oninput="buildUTM()"></div><div id="utm-output" class="utm-result" style="display:none" onclick="copyUTM()"></div></div></div>`;
