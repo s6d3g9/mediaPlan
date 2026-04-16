@@ -2007,7 +2007,7 @@ function calc(){
 
   const catKey=cat;
   render({n,catName,catKey,budget,rm,cMin,cMax,cAvg,clMin,clMax,clAvg,impr,
-    ldMin,ldMax,ldAvg,cplMin,cplMax,cplAvg,sB,rB,siteCR,rD,scen,testB,bFor30,ltvRepeat});
+    ldMin,ldMax,ldAvg,cplMin,cplMax,cplAvg,sB,rB,siteCR,rD,scen,testB,bFor30,ltvRepeat,mp});
 }
 
 function fmt(n){
@@ -2481,7 +2481,7 @@ function render(d){
       <div class="rrow"><span class="rk">Ожидаемых лидов/мес</span><span class="rv">${d.ldMin} – ${d.ldMax}</span></div>
       <div class="rrow"><span class="rk">Стоимость лида (CPL)</span><span class="rv">~${Math.round(d.cplAvg)} ₽</span></div>
       <div class="rrow"><span class="rk">Поиск / РСЯ</span><span class="rv">${d.sB.toLocaleString('ru')} ₽ / ${d.rB.toLocaleString('ru')} ₽</span></div>
-      ${d.rD?`<div class="rrow"><span class="rk">Прогноз продаж/мес</span><span class="rv">${d.rD.s}</span></div><div class="rrow"><span class="rk">Прогноз выручки</span><span class="rv">${fmtM(d.rD.rev)}</span></div><div class="rrow"><span class="rk">Маржа (${Math.round(mp*100)}%)</span><span class="rv">${fmtM(d.rD.margin)}</span></div><div class="rrow"><span class="rk">Прибыль (за вычетом рекламы)</span><span class="rv" style="color:${d.rD.profit>=0?'var(--green)':'#f87171'}">${fmtM(d.rD.profit)}</span></div><div class="rrow"><span class="rk">ROMI</span><span class="rv" style="color:${d.rD.romi>=0?'var(--green)':'#f87171'}">${Math.round(d.rD.romi)}%</span></div>${d.rD.ltvRepeat>1?`<div class="rrow"><span class="rk">LTV-выручка (×${d.rD.ltvRepeat})</span><span class="rv" style="color:var(--green)">${fmtM(d.rD.ltvRev)}</span></div><div class="rrow"><span class="rk">LTV ROMI</span><span class="rv" style="color:${d.rD.ltvRomi>=0?'var(--green)':'#f87171'}">${Math.round(d.rD.ltvRomi)}%</span></div>`:''}`:''}
+      ${d.rD?`<div class="rrow"><span class="rk">Прогноз продаж/мес</span><span class="rv">${d.rD.s}</span></div><div class="rrow"><span class="rk">Прогноз выручки</span><span class="rv">${fmtM(d.rD.rev)}</span></div><div class="rrow"><span class="rk">Маржа (${Math.round(d.mp*100)}%)</span><span class="rv">${fmtM(d.rD.margin)}</span></div><div class="rrow"><span class="rk">Прибыль (за вычетом рекламы)</span><span class="rv" style="color:${d.rD.profit>=0?'var(--green)':'#f87171'}">${fmtM(d.rD.profit)}</span></div><div class="rrow"><span class="rk">ROMI</span><span class="rv" style="color:${d.rD.romi>=0?'var(--green)':'#f87171'}">${Math.round(d.rD.romi)}%</span></div>${d.rD.ltvRepeat>1?`<div class="rrow"><span class="rk">LTV-выручка (×${d.rD.ltvRepeat})</span><span class="rv" style="color:var(--green)">${fmtM(d.rD.ltvRev)}</span></div><div class="rrow"><span class="rk">LTV ROMI</span><span class="rv" style="color:${d.rD.ltvRomi>=0?'var(--green)':'#f87171'}">${Math.round(d.rD.ltvRomi)}%</span></div>`:''}`:''}
     </div>
     <div style="margin-top:.65rem;font-size:.68rem;color:var(--dim);line-height:1.6">* Данные прогнозные, основаны на средних бенчмарках рынка РФ. Фактические результаты зависят от сайта, объявлений и конкуренции.</div>
     <div class="export-btns"><button class="ebtn" onclick="copyReport()">📋 Копировать отчёт</button><button class="pbtn" onclick="doPrint()">🖨️ Выгрузить PDF</button></div>`;
