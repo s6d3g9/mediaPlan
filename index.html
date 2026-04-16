@@ -1921,81 +1921,51 @@ function generateAds(n,catKey){
   const nm=n.name;
   const nmL=nm.toLowerCase();
   const tpl=AD_TEMPLATES[catKey]||AD_TEMPLATES._default;
-  const keys=(n.keys||[]).map(v=>String(v||'').replace(/\{[^}]+\}/g,'').trim()).filter(Boolean);
-  const seed=((catKey+'|'+nm+'|'+keys.join('|')).split('').reduce((acc,ch)=>((acc*33)+ch.charCodeAt(0))>>>0,5381))>>>0;
-  const pick=(arr,offset=0)=>arr[(seed+offset)%arr.length];
-  const titlePhrase=v=>String(v||'').replace(/\s+/g,' ').trim();
   const priceStr='от '+price.toLocaleString('ru')+' ₽';
   const mNames=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
   const mo=mNames[new Date().getMonth()];
   const yr=new Date().getFullYear();
   const ratingNum='4.'+Math.floor(Math.random()*2+8);
   const revCount=Math.floor(Math.random()*2000+800);
-  const kw1=titlePhrase(keys[0]||nm);
-  const kw2=titlePhrase(keys[1]||keys[0]||nm);
-  const kw3=titlePhrase(keys[2]||keys[1]||nm);
-  const kw4=titlePhrase(keys[3]||keys[2]||nm);
-  const tipShort=titlePhrase((n.tip||'').split('.')[0]);
-  const compHint=n.comp==='Высокая' ? 'конкурентный рынок' : n.comp==='Низкая' ? 'низкая конкуренция' : 'устойчивый спрос';
+  const kw1=(n.keys[0]||nm).replace(/\[город\]/g,'').trim();
+  const kw2=(n.keys[1]||kw1).replace(/\[город\]/g,'').trim();
+  const cap=s=>(s||'').charAt(0).toUpperCase()+(s||'').slice(1);
+  const tipFirst=(n.tip||'').split(/\.\s*/)[0];
+  const disc=Math.floor(Math.random()*10+10);
+  const spots=Math.floor(Math.random()*8+3);
 
-  const angles=[
-    'экспертный подход',
-    'под ключ',
-    'прозрачная смета',
-    'быстрый запуск',
-    'точная настройка',
-    'сильный оффер',
-  ];
-  const proof=[
-    'опытные специалисты и понятный процесс',
-    'кейсы, сроки и контроль на каждом этапе',
-    'честный расчёт и прогноз результата',
-    'работа без лишних согласований и потерь времени',
-    'сервис, который доводит заявку до сделки',
-    'фокус на качестве, а не на формальных обещаниях',
-  ];
-  const ctas=[
-    'оставьте заявку и получите расчёт',
-    'запросите консультацию без обязательств',
-    'получите предложение под вашу задачу',
-    'обсудите проект с экспертом',
-    'проверьте стоимость за 2 минуты',
-    'запустите решение уже сегодня',
-  ];
+  // --- Заголовки 2 (уникальные для каждого варианта, с подстановкой названия подниши) ---
+  const t2_1='✔ '+tpl.offers[0]+' на «'+nmL+'»';
+  const t2_2='⭐ '+tpl.offers[2]+' · Рейтинг '+ratingNum;
+  const t2_3='⚡ '+cap(nmL)+' · '+tpl.offers[3];
+  const t2_4='🔥 −'+disc+'% на «'+nmL+'» до конца '+mo;
+  const t2_5='📍 '+cap(nmL)+' рядом · '+tpl.offers[0];
+  const t2_6='💰 '+cap(nmL)+' '+priceStr+' · '+tpl.cta[0];
 
-  const h2=[
-    kw1+' · '+pick(angles,0),
-    'Под '+nmL+' с акцентом на '+pick(angles,1),
-    'Решение для '+nmL+' без лишних затрат',
-    pick(angles,2)+' для '+nmL,
-    'Понятный план и '+pick(angles,3),
-    'Сильная упаковка '+nmL+' для заявки',
-  ];
-  const desc=[
-    'Для ниши «'+nmL+'» мы собираем '+pick(proof,0)+'. '+pick(ctas,0)+'. '+(tipShort||'Работаем на результат.')+' '+compHint+'.',
-    'Усиливаем спрос на «'+nmL+'» через '+pick(angles,1)+'. '+kw2+' и '+kw3+' помогают выйти на качественные лиды. '+pick(ctas,1)+'.',
-    'Позиционирование под «'+nmL+'»: '+pick(proof,1)+'. '+kw1+', '+kw2+' и '+kw4+' формируют доверие и повышают CTR.',
-    'Понятный оффер для «'+nmL+'» без воды: '+pick(angles,4)+', прозрачная цена и быстрый ответ. '+pick(ctas,2)+'.',
-    'Сильный маркетинговый сценарий для «'+nmL+'»: '+pick(proof,2)+'. '+pick(ctas,3)+'.',
-    'Рекламное сообщение под «'+nmL+'» строим вокруг '+pick(angles,5)+'. '+tipShort+' '+pick(ctas,4)+'.',
-  ];
-  const rsyDesc=[
-    'Ищете «'+nmL+'»? '+pick(proof,3)+'. '+pick(ctas,5)+'.',
-    'Нужен результат по '+nmL+' без переплат? '+pick(proof,4)+'. '+priceStr+' — '+pick(ctas,1)+'.',
-    'Выбирают нас за '+pick(proof,5)+'. '+tipShort+' '+pick(ctas,2)+'.',
-  ];
+  // --- Тексты объявлений (связные, конкретные, уникальные для подниши) ---
+  const d1=cap(nmL)+' '+priceStr+'. '+tpl.offers[0]+', '+tpl.offers[1].toLowerCase()+'. Работаем без выходных. Запишитесь — ответим за 5 минут!';
+  const d2='«'+nm+'» — '+revCount+'+ довольных клиентов. '+tpl.offers[2]+'. Прозрачные цены, чёткие сроки. Рейтинг '+ratingNum+' на Яндекс.Картах.';
+  const d3=tpl.cta[0]+' на «'+nmL+'» прямо сейчас. '+tpl.offers[3]+'. Ежедневно без выходных, без скрытых платежей. Ответим за 5 минут.';
+  const d4='Акция: −'+disc+'% на «'+nmL+'» до конца месяца. Осталось '+spots+' мест. '+tipFirst+'. '+cap(tpl.cta[1])+'!';
+  const d5='«'+nm+'» в вашем городе '+priceStr+'. Удобное расположение, '+tpl.offers[0].toLowerCase()+'. Запись за 2 минуты. Звоните!';
+  const d6='Почему нас выбирают для «'+nmL+'»: '+tpl.offers[2].toLowerCase()+', '+tpl.offers[3].toLowerCase()+'. '+revCount+'+ положительных отзывов. '+cap(tpl.cta[0])+'!';
+
+  // --- РСЯ тексты ---
+  const r1='Ищете «'+nmL+'»? '+tpl.offers[0]+', '+tpl.offers[1].toLowerCase()+'. '+revCount+'+ довольных клиентов. Оставьте заявку!';
+  const r2='«'+nm+'» — '+tpl.offers[2].toLowerCase()+', '+tpl.offers[3].toLowerCase()+'. '+cap(tpl.cta[0])+' со скидкой '+disc+'% до конца '+mo+'!';
+  const r3='Надоело переплачивать за «'+nmL+'»? Честная цена '+priceStr+', без навязанных услуг. '+cap(tpl.cta[0])+' без обязательств!';
 
   return{search:[
-    {t1:kw1+' — '+priceStr+' ['+mo+' '+yr+']',t2:h2[0],desc:desc[0],sl:tpl.sl[0]},
-    {t1:nm+' ★ '+ratingNum+' — '+revCount+' отзывов',t2:h2[1],desc:desc[1],sl:tpl.sl[1]},
-    {t1:pick(ctas,0)+' — '+nm+' ↗',t2:h2[2],desc:desc[2],sl:tpl.sl[0]},
-    {t1:kw2+' — скидка '+Math.floor(Math.random()*10+10)+'% в '+mo,t2:h2[3],desc:desc[3],sl:tpl.sl[1]},
-    {t1:nm+' в [городе] — от '+price.toLocaleString('ru')+' ₽',t2:h2[4],desc:desc[4],sl:tpl.sl[0]},
-    {t1:'Сравните условия по '+nmL,t2:h2[5],desc:desc[5],sl:tpl.sl[1]},
+    {t1:cap(kw1)+' — '+priceStr+' ['+mo+' '+yr+']', t2:t2_1, desc:d1, sl:tpl.sl[0]},
+    {t1:nm+' ★ '+ratingNum+' — '+revCount+' отзывов', t2:t2_2, desc:d2, sl:tpl.sl[1]},
+    {t1:cap(tpl.cta[0])+' — '+nm+' ↗', t2:t2_3, desc:d3, sl:tpl.sl[0]},
+    {t1:cap(kw2)+' — скидка '+disc+'% в '+mo, t2:t2_4, desc:d4, sl:tpl.sl[1]},
+    {t1:nm+' в [городе] — '+priceStr, t2:t2_5, desc:d5, sl:tpl.sl[0]},
+    {t1:'Сравните цены на '+nmL, t2:t2_6, desc:d6, sl:tpl.sl[1]},
   ],rsy:[
-    {t1:'Ищете: '+nmL+'?',t2:pick(angles,0)+' · '+priceStr,desc:rsyDesc[0],sl:tpl.rsySl[0]},
-    {t1:nm+' — '+pick(proof,0),t2:pick(ctas,1)+' · '+mo+' '+yr,desc:rsyDesc[1],sl:tpl.rsySl[1]},
-    {t1:'Нужен '+nmL+' без лишних расходов?',t2:'✅ '+pick(angles,2)+' · '+revCount+'+ клиентов',desc:rsyDesc[2],sl:tpl.rsySl[0]},
+    {t1:'Ищете: '+nmL+'?', t2:priceStr+' · '+tpl.offers[0], desc:r1, sl:tpl.rsySl[0]},
+    {t1:nm+' — '+tpl.offers[1].toLowerCase(), t2:cap(tpl.cta[0])+' · акция '+mo+' '+yr, desc:r2, sl:tpl.rsySl[1]},
+    {t1:'Надоело переплачивать за '+nmL+'?', t2:'✅ Честная цена · '+revCount+'+ клиентов', desc:r3, sl:tpl.rsySl[0]},
   ]};
 }
 
