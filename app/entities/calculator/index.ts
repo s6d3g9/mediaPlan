@@ -1,0 +1,5 @@
+export { useCalculator } from './model/useCalculator'
+export { DB } from './data/db'
+export { NICHE_TIPS } from './data/nicheTips'
+export { generateCampaign, generateAds } from './data/campaignGenerator'
+export type { CalculatorInput, CalculationResult, SubnicheData, RoiData, ScenarioItem } from './model/types'
