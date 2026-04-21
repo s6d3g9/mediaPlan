@@ -4,6 +4,9 @@ export const useThemeStore = defineStore('theme', {
   state: () => ({
     theme: 'dark' as 'dark' | 'light'
   }),
+  getters: {
+    isDark: (state) => state.theme === 'dark'
+  },
   actions: {
     init() {
       if (import.meta.client) {
